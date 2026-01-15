@@ -1,0 +1,69 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "parallel",
+          "data": {
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "Far-In Driver-Pole"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "Absorb Coral"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Start Repel"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "High Rung"
+          }
+        },
+        {
+          "type": "parallel",
+          "data": {
+            "commands": [
+              {
+                "type": "named",
+                "data": {
+                  "name": "Collect Coral"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "Stop Repel"
+                }
+              },
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "Right Collector"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}
