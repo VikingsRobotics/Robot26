@@ -2,14 +2,11 @@
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
-#include "Robot.h"
+#include "Robot.hpp"
 
-#include <frc/Compressor.h>
 #include <frc2/command/CommandScheduler.h>
 
-Robot::Robot() {
-    frc::Compressor{frc::PneumaticsModuleType::CTREPCM}.EnableDigital();
-}
+Robot::Robot() {}
 
 void Robot::RobotPeriodic() {
     frc2::CommandScheduler::GetInstance().Run();
@@ -25,7 +22,7 @@ void Robot::AutonomousInit() {
     m_autonomousCommand = m_container.GetAutonomousCommand();
 
     if (m_autonomousCommand) {
-        m_autonomousCommand->Schedule();
+        frc2::CommandScheduler::GetInstance().Schedule(m_autonomousCommand);
     }
 }
 
@@ -35,7 +32,7 @@ void Robot::AutonomousExit() {}
 
 void Robot::TeleopInit() {
     if (m_autonomousCommand) {
-        m_autonomousCommand->Cancel();
+        frc2::CommandScheduler::GetInstance().Cancel(m_autonomousCommand);
     }
 }
 

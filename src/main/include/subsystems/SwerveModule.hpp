@@ -1,7 +1,6 @@
 #pragma once
-
-#include "Disable.h"
-#ifndef NO_SWERVE
+#ifndef SUBSYSTEM_MODULE_H
+#define SUBSYSTEM_MODULE_H
 
 #include <units/angle.h>
 #include <units/velocity.h>
@@ -58,6 +57,8 @@ private:
 
     std::function<units::angle::turn_t()> m_getTalonPosition;
     std::function<units::angular_velocity::turns_per_second_t()> m_getTalonVelocity;
+
+    friend class SwerveImportantCommand;
 };
 
 #endif

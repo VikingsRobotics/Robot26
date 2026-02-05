@@ -1,5 +1,4 @@
-#include "subsystems/SwerveSubsystem.h"
-#ifndef NO_SWERVE
+#include "subsystems/SwerveSubsystem.hpp"
 
 #include <frc/ComputerVisionUtil.h>
 
@@ -20,7 +19,6 @@
 
 #include <fmt/format.h>
 
-// @formatter:off
 SwerveSubsystem::SwerveSubsystem() : m_getGyroYaw{m_gryo.GetYaw().AsSupplier()} {
     m_gryo.Reset();
     SetName("Swerve Subsystem");
@@ -32,7 +30,7 @@ SwerveSubsystem::SwerveSubsystem() : m_getGyroYaw{m_gryo.GetYaw().AsSupplier()} 
         [this](const frc::ChassisSpeeds speeds, const pathplanner::DriveFeedforwards dff) {
             Drive(speeds, dff.robotRelativeForcesX, dff.robotRelativeForcesY);
         },
-        std::make_shared<pathplanner::PPHolonomicDriveController>(Drive::AutoSettings::kTranslationPID, Drive::AutoSettings::kRotationalPID), config,
+        std::make_shared<pathplanner::PPHolonomicDriveController>(Swerve::Auto::kTranslationPID, Swerve::Auto::kRotationalPID), config,
         []() {
             auto alliance = frc::DriverStation::GetAlliance();
             if (alliance) {
@@ -62,31 +60,8 @@ SwerveSubsystem::SwerveSubsystem() : m_getGyroYaw{m_gryo.GetYaw().AsSupplier()} 
         m_field.GetObject("path")->SetPoses(poses);
     });
 
-    frc::SmartDashboard::PutBoolean("Swerve Vision", false);
     frc::SmartDashboard::PutData(this);
 }
-// @formatter:on
-#ifndef NO_VISION
-void SwerveSubsystem::AddBestEstimates(const VisionProvider& self, std::vector<VisionProvider::AprilTagTransform> tags) {
-    units::second_t currentTimestamp = frc::Timer::GetTimestamp();
-    size_t foundTags = 0;
-    return;
-    for (size_t index = 0; index < tags.size(); ++index) {
-        std::optional<frc::Pose3d> aprilPose = self.fieldLayout.GetTagPose(tags.at(index).ID);
-
-        if (!aprilPose.has_value()) {
-            continue;
-        } else if (aprilPose.value().Translation().Norm() > Drive::Vision::kRequiredDeltaDistance) {
-            continue;
-        }
-        ++foundTags;
-        frc::Pose3d pose = frc::ObjectToRobotPose(aprilPose.value(), tags.at(index).relativePose, Drive::Vision::kCameraMountingPosition);
-
-        m_poseEstimator.AddVisionMeasurement(pose.ToPose2d(), currentTimestamp);
-    }
-    frc::SmartDashboard::PutNumber("Found Tags", foundTags);
-}
-#endif
 
 void SwerveSubsystem::Periodic() {
     // Tracks robot position using the position of swerve modules and gryo
@@ -136,7 +111,7 @@ void SwerveSubsystem::StopModules() {
 
 void SwerveSubsystem::SetModulesState(wpi::array<frc::SwerveModuleState, 4> states) {
     // Make sure that we are under max speed
-    Drive::DeviceProperties::SystemControl::kDriveKinematics.DesaturateWheelSpeeds(&states, Drive::Mechanism::kPhysicalMoveMax);
+    Swerve::System::kDriveKinematics.DesaturateWheelSpeeds(&states, Swerve::Mechanism::kMaxMovement);
     // Calls every swerve modules SetStates function
     m_frontLeft.SetState(states[0]);
     m_frontRight.SetState(states[1]);
@@ -147,7 +122,7 @@ void SwerveSubsystem::SetModulesState(wpi::array<frc::SwerveModuleState, 4> stat
 void SwerveSubsystem::SetModulesState(wpi::array<frc::SwerveModuleState, 4> states, const std::vector<units::newton_t>& feedforwardX,
                                       const std::vector<units::newton_t>& feedforwardY) {
     // Make sure that we are under max speed
-    Drive::DeviceProperties::SystemControl::kDriveKinematics.DesaturateWheelSpeeds(&states, Drive::Mechanism::kPhysicalMoveMax);
+    Swerve::System::kDriveKinematics.DesaturateWheelSpeeds(&states, Swerve::Mechanism::kMaxMovement);
     // Calls every swerve modules SetStates function with feedforward
     m_frontLeft.SetState(states[0], feedforwardX.at(0), feedforwardY.at(0));
     m_frontRight.SetState(states[1], feedforwardX.at(1), feedforwardY.at(1));
@@ -156,17 +131,16 @@ void SwerveSubsystem::SetModulesState(wpi::array<frc::SwerveModuleState, 4> stat
 }
 
 frc::ChassisSpeeds SwerveSubsystem::GetCurrentSpeeds() {
-    return Drive::DeviceProperties::SystemControl::kDriveKinematics.ToChassisSpeeds(
-        {m_frontLeft.GetState(), m_frontRight.GetState(), m_backLeft.GetState(), m_backRight.GetState()});
+    return Swerve::System::kDriveKinematics.ToChassisSpeeds({m_frontLeft.GetState(), m_frontRight.GetState(), m_backLeft.GetState(), m_backRight.GetState()});
 }
 
 void SwerveSubsystem::Drive(frc::ChassisSpeeds speed) {
-    wpi::array<frc::SwerveModuleState, 4> states = Drive::DeviceProperties::SystemControl::kDriveKinematics.ToSwerveModuleStates(speed);
+    wpi::array<frc::SwerveModuleState, 4> states = Swerve::System::kDriveKinematics.ToSwerveModuleStates(speed);
     SetModulesState(states);
 }
 
 void SwerveSubsystem::Drive(frc::ChassisSpeeds speed, const std::vector<units::newton_t>& feedforwardX, const std::vector<units::newton_t>& feedforwardY) {
-    wpi::array<frc::SwerveModuleState, 4> states = Drive::DeviceProperties::SystemControl::kDriveKinematics.ToSwerveModuleStates(speed);
+    wpi::array<frc::SwerveModuleState, 4> states = Swerve::System::kDriveKinematics.ToSwerveModuleStates(speed);
     SetModulesState(states, feedforwardX, feedforwardY);
 }
 
@@ -183,5 +157,3 @@ void SwerveSubsystem::X() {
     m_backLeft.SetState(frc::SwerveModuleState{0_mps, frc::Rotation2d{-45_deg}});
     m_backRight.SetState(frc::SwerveModuleState{0_mps, frc::Rotation2d{45_deg}});
 }
-
-#endif
