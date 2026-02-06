@@ -13,25 +13,23 @@ env:
 
 jobs:
 
-  formatting:
-    name: "Check Formatting"
-    runs-on: ubuntu-24.04
-    container: wpilib/ubuntu-base:24.04
-
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-      
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-        # working-directory: .
-
-      - name: Install Clang Format 21.0
-        run:  sudo apt install clang-format-21
-      
-      - name: Check formatting
-        run: ./gradlew spotlessCheck -Ptoolchain-optional-roboRio
-        # working-directory: .
+  # Maybe next time we can get clang-format checker
+  #formatting:
+  #  name: "Check Formatting"
+  #  runs-on: ubuntu-24.04
+  #  container: wpilib/ubuntu-base:24.04
+  #
+  #  steps:
+  #    - name: Checkout repo
+  #      uses: actions/checkout@v4
+  #    
+  #    - name: Grant execute permission for gradlew
+  #      run: chmod +x gradlew
+  #      # working-directory: .
+  #    
+  #    - name: Check formatting
+  #      run: ./gradlew spotlessCheck -Ptoolchain-optional-roboRio
+  #      # working-directory: .
   
   # We don't do any tests
 
