@@ -27,7 +27,7 @@ jobs:
         # working-directory: .
 
       - name: Install Clang Format 21.0
-        run:  sudo apt install clang-format-21.0
+        run:  sudo apt install clang-format-21
       
       - name: Check formatting
         run: ./gradlew spotlessCheck -Ptoolchain-optional-roboRio
@@ -67,15 +67,11 @@ jobs:
         run: chmod +x gradlew
         # working-directory: .
       
-      - name: Ensure spotless is applied
-        run: ./gradlew spotlessApply -Ptoolchain-optional-roboRio
-        # working-directory: .
-      
       - name: Get RoboRio Toolchains
         run: ./gradlew installRoboRioToolchain
 
       - name: Build
-        run: ./gradlew build ${{ matrix.build-options }}
+        run: ./gradlew build ${{ matrix.build-options }} -x spotlessCppApply -x spotlessCppCheck -x spotlessCppDiagnose
         # working-directory: .
 
   # Make sure that simulation code can work on both Windows and MacOS
@@ -108,17 +104,12 @@ jobs:
       - name: Grant execute permission for gradlew (mac)
         if: ${{ matrix.os-name == 'macos' }}
         run: chmod +x gradlew
-
-      - name: Ensure spotless is applied
-        run: ./gradlew spotlessApply -Ptoolchain-optional-roboRio
-        # working-directory: .
       
       - name: Get RoboRio Toolchains
         run: ./gradlew installRoboRioToolchain
         # working-directory: .
 
-
       - name: Build
-        run: ./gradlew build -Pbuildalldesktop
+        run: ./gradlew build -Pbuildalldesktop -x spotlessCppApply -x spotlessCppCheck -x spotlessCppDiagnose
         # working-directory: .
   
