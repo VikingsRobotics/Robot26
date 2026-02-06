@@ -54,7 +54,7 @@ jobs:
             artifact-name: Arm64
             build-options: "-Ponlylinuxarm64"
     name: "Build - ${{ matrix.artifact-name }}"
-    needs: [formatting]
+    # needs: [formatting]
     runs-on: ubuntu-22.04
     container: ${{ matrix.container }}
     steps:
@@ -87,7 +87,7 @@ jobs:
             artifact-name: macOS
             os-name: macos
     name: "Build - ${{ matrix.artifact-name }}"
-    needs: [formatting]
+    # needs: [formatting]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repo
