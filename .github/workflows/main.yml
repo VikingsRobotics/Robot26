@@ -15,8 +15,8 @@ jobs:
 
   formatting:
     name: "Check Formatting"
-    runs-on: ubuntu-22.04
-    container: wpilib/ubuntu-base:22.04
+    runs-on: ubuntu-24.04
+    container: wpilib/ubuntu-base:24.04
 
     steps:
       - name: Checkout repo
@@ -45,7 +45,7 @@ jobs:
           - container: wpilib/roborio-cross-ubuntu:2025-22.04
             artifact-name: Athena
             build-options: "-Ponlylinuxathena"
-          - container: wpilib/ubuntu-base:22.04
+          - container: wpilib/ubuntu-base:24.04
             artifact-name: Linux
             build-options: "-Ponlylinuxx86-64"
           # CTRE Lib is not loading so don't do it
