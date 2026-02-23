@@ -3,11 +3,11 @@
 SwerveImportantCommand::SwerveImportantCommand(SwerveSubsystem* const subsystem) : m_subsystem{subsystem}, m_important{"output.chrp"} {
     AddRequirements(m_subsystem);
     SetName("Important Command");
-    m_important.AddInstrument(m_subsystem->m_backLeft.m_drivingTalonFx);
-    m_important.AddInstrument(m_subsystem->m_backRight.m_drivingTalonFx);
-    m_important.AddInstrument(m_subsystem->m_frontLeft.m_drivingTalonFx);
-    m_important.AddInstrument(m_subsystem->m_frontRight.m_drivingTalonFx);
-    m_important.AddInstrument(m_subsystem->m_gryo);
+    m_important.AddInstrument(m_subsystem->GetFrontLeftModule().GetDriveMotor());
+    m_important.AddInstrument(m_subsystem->GetFrontRightModule().GetDriveMotor());
+    m_important.AddInstrument(m_subsystem->GetBackLeftModule().GetDriveMotor());
+    m_important.AddInstrument(m_subsystem->GetBackRightModule().GetDriveMotor());
+    m_important.AddInstrument(m_subsystem->GetGyro());
 }
 
 void SwerveImportantCommand::Initialize() {

@@ -1,6 +1,6 @@
-#include "commands/SwerveJoystickCommand.hpp"
+#include "commands/SwerveJoystickAxisLimitedCommand.hpp"
 
-#include "constants/Swerve.hpp"
+#include "Constants.hpp"
 
 #include <frc/kinematics/ChassisSpeeds.h>
 
@@ -8,24 +8,24 @@
 
 #include <frc2/command/RunCommand.h>
 
-SwerveJoystickCommand::SwerveJoystickCommand(SwerveSubsystem* const subsystem, frc2::CommandJoystick& joystick)
+SwerveJoystickAxisLimitedCommand::SwerveJoystickAxisLimitedCommand(SwerveSubsystem* const subsystem, frc2::CommandJoystick& joystick)
     : m_subsystem{subsystem},
       m_joystick{joystick.GetHID()},
-      m_limiterX{Swerve::TeleopOperator::kLimiter},
-      m_limiterY{Swerve::TeleopOperator::kLimiter},
-      m_limiterA{Swerve::TeleopOperator::kLimiter} {
+      m_limiterX{Swerve::TeleopOperator::kTransLimiter},
+      m_limiterY{Swerve::TeleopOperator::kTransLimiter},
+      m_limiterA{Swerve::TeleopOperator::kAngleLimiter} {
     AddRequirements(m_subsystem);
     SetName("Swerve Joystick Command");
 }
 
-void SwerveJoystickCommand::Initialize() {
+void SwerveJoystickAxisLimitedCommand::Initialize() {
     m_fieldCentric = true;
     m_limiterX.Reset(0);
     m_limiterY.Reset(0);
     m_limiterA.Reset(0);
 }
 
-void SwerveJoystickCommand::Execute() {
+void SwerveJoystickAxisLimitedCommand::Execute() {
     double throttle = (-m_joystick.GetRawAxis(3) + 1) / 2;
     frc::SmartDashboard::PutNumber("Throttle", throttle);
     frc::SmartDashboard::PutBoolean("Field Centric", m_fieldCentric);
@@ -36,7 +36,7 @@ void SwerveJoystickCommand::Execute() {
         m_subsystem->ZeroHeading();
     }
     if (m_joystick.GetRawButton(1)) {
-        m_subsystem->Brake();
+        m_subsystem->StopModules();
         return;
     }
 
@@ -53,7 +53,7 @@ void SwerveJoystickCommand::Execute() {
 
     double normalizedDeadbandX = controllerX < 0 ? deadbandMove : -deadbandMove;
     double normalizedDeadbandY = controllerY < 0 ? deadbandMove : -deadbandMove;
-    double normalizedDeadbandA = controllerRot < 0 ? deadbandMove : -deadbandMove;
+    double normalizedDeadbandA = controllerRot < 0 ? deadbandRot : -deadbandRot;
 
     // X^2 + Y^2 > D^2
     // Easier process than sqrt(X^2 + Y^2) > Deadband
@@ -71,7 +71,7 @@ void SwerveJoystickCommand::Execute() {
 
     vx = renormalizedX * throttle * Swerve::TeleopOperator::kDriveMoveSpeedMax;
     vy = renormalizedY * throttle * Swerve::TeleopOperator::kDriveMoveSpeedMax;
-    va = renormalizedA * throttle * Swerve::TeleopOperator::kDriveAngleSpeedMax;
+    va = renormalizedA * Swerve::TeleopOperator::kDriveAngleSpeedMax;
 
     frc::ChassisSpeeds speeds{};
     if (m_fieldCentric) {
@@ -80,23 +80,15 @@ void SwerveJoystickCommand::Execute() {
         speeds = frc::ChassisSpeeds{vx, vy, va};
     }
 
-    wpi::array<frc::SwerveModuleState, 4> swerveModule = Swerve::System::kDriveKinematics.ToSwerveModuleStates(speeds);
+    wpi::array<frc::SwerveModuleState, 4> swerveModule = m_subsystem->GetKinematics().ToSwerveModuleStates(speeds);
 
-    for (size_t i = 0; i < swerveModule.size(); ++i) {
-        if (units::math::abs(swerveModule[i].speed) < 0.001_mps) {
-            swerveModule[i].speed = 0_mps;
-            swerveModule[i].angle = m_lastState[i];
-        }
-        m_lastState[i] = swerveModule[i].angle;
-    }
-
-    m_subsystem->SetModulesState(swerveModule);
+    m_subsystem->SetModulesState(swerveModule, true);
 }
 
-void SwerveJoystickCommand::End(bool interrupted) {
+void SwerveJoystickAxisLimitedCommand::End(bool interrupted) {
     m_subsystem->StopModules();
 }
 
-bool SwerveJoystickCommand::IsFinished() {
+bool SwerveJoystickAxisLimitedCommand::IsFinished() {
     return false;
 }

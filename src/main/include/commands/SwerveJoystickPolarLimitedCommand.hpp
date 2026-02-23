@@ -1,6 +1,6 @@
 #pragma once
-#ifndef COMMAND_SWERVE_JOYSTICK_H
-#define COMMAND_SWERVE_JOYSTICK_H
+#ifndef COMMAND_SWERVE_POLAR_JOYSTICK_H
+#define COMMAND_SWERVE_POLAR_JOYSTICK_H
 
 #include "subsystems/SwerveSubsystem.hpp"
 
@@ -13,9 +13,9 @@
 
 #include <wpi/array.h>
 
-class SwerveJoystickCommand : public frc2::CommandHelper<frc2::Command, SwerveJoystickCommand> {
+class SwerveJoystickPolarLimitedCommand : public frc2::CommandHelper<frc2::Command, SwerveJoystickPolarLimitedCommand> {
 public:
-    SwerveJoystickCommand(SwerveSubsystem* const subsystem, frc2::CommandJoystick& joystick);
+    SwerveJoystickPolarLimitedCommand(SwerveSubsystem* const subsystem, frc2::CommandJoystick& joystick);
 
     void Initialize() override;
 
@@ -28,11 +28,9 @@ public:
 private:
     SwerveSubsystem* const m_subsystem;
     frc::Joystick& m_joystick;
-    wpi::array<frc::Rotation2d, 4> m_lastState{{frc::Rotation2d{}, frc::Rotation2d{}, frc::Rotation2d{}, frc::Rotation2d{}}};
     bool m_fieldCentric = true;
-    bool m_precision = false;
-    frc::SlewRateLimiter<units::scalar> m_limiterX;
-    frc::SlewRateLimiter<units::scalar> m_limiterY;
+    frc::SlewRateLimiter<units::scalar> m_limiterMag;
+    frc::SlewRateLimiter<units::scalar> m_limiterDir;
     frc::SlewRateLimiter<units::scalar> m_limiterA;
 };
 

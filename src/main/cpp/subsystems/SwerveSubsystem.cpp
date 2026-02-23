@@ -19,8 +19,8 @@
 
 #include <fmt/format.h>
 
-SwerveSubsystem::SwerveSubsystem() : m_getGyroYaw{m_gryo.GetYaw().AsSupplier()} {
-    m_gryo.Reset();
+SwerveSubsystem::SwerveSubsystem() : m_getGyroYaw{m_gyro.GetYaw().AsSupplier()} {
+    m_gyro.Reset();
     SetName("Swerve Subsystem");
 
     pathplanner::RobotConfig config = pathplanner::RobotConfig::fromGUISettings();
@@ -32,11 +32,7 @@ SwerveSubsystem::SwerveSubsystem() : m_getGyroYaw{m_gryo.GetYaw().AsSupplier()} 
         },
         std::make_shared<pathplanner::PPHolonomicDriveController>(Swerve::Auto::kTranslationPID, Swerve::Auto::kRotationalPID), config,
         []() {
-            auto alliance = frc::DriverStation::GetAlliance();
-            if (alliance) {
-                return alliance.value() == frc::DriverStation::Alliance::kRed;
-            }
-            return false;
+            return frc::DriverStation::GetAlliance().value_or(frc::DriverStation::Alliance::kBlue) == frc::DriverStation::Alliance::kRed;
         },
         this);
     frc::SmartDashboard::PutData("Odometry Field", &m_pose);
@@ -72,7 +68,11 @@ void SwerveSubsystem::Periodic() {
 }
 
 void SwerveSubsystem::ZeroHeading() {
-    m_gryo.Reset();
+    m_gyro.Reset();
+}
+
+void SwerveSubsystem::SetOperatorPerspective(units::turn_t perspective) {
+    m_operatorPerspective = perspective;
 }
 
 static units::degree_t WrapAngle(units::degree_t angle) {
@@ -83,6 +83,10 @@ static units::degree_t WrapAngle(units::degree_t angle) {
 
 units::degree_t SwerveSubsystem::GetHeading() {
     return WrapAngle(m_getGyroYaw());
+}
+
+units::degree_t SwerveSubsystem::GetOperatorHeading() {
+    return WrapAngle(m_getGyroYaw() + m_operatorPerspective);
 }
 
 frc::Rotation2d SwerveSubsystem::GetRotation2d() {
@@ -103,57 +107,147 @@ void SwerveSubsystem::ResetOdometry(frc::Pose2d pose) {
 
 void SwerveSubsystem::StopModules() {
     // Calls every swerve modules Stop function
-    m_frontLeft.Stop();
-    m_frontRight.Stop();
-    m_backLeft.Stop();
-    m_backRight.Stop();
+    SwerveModuleControl stopCommand = SwerveModuleControl{}.WithAzimuthBrake().WithDriveBrake();
+    m_frontLeft.ApplyControl(stopCommand);
+    m_frontRight.ApplyControl(stopCommand);
+    m_backLeft.ApplyControl(stopCommand);
+    m_backRight.ApplyControl(stopCommand);
 }
 
-void SwerveSubsystem::SetModulesState(wpi::array<frc::SwerveModuleState, 4> states) {
+void SwerveSubsystem::SetModulesState(wpi::array<frc::SwerveModuleState, 4> states, bool cosineLimit) {
     // Make sure that we are under max speed
-    Swerve::System::kDriveKinematics.DesaturateWheelSpeeds(&states, Swerve::Mechanism::kMaxMovement);
+    m_driveKinematics.DesaturateWheelSpeeds(&states, Swerve::Mechanism::kMaxMovement);
     // Calls every swerve modules SetStates function
-    m_frontLeft.SetState(states[0]);
-    m_frontRight.SetState(states[1]);
-    m_backLeft.SetState(states[2]);
-    m_backRight.SetState(states[3]);
+    m_frontLeft.ApplyControl(m_frontLeft.GetControl(states[0], cosineLimit).WithDriveClosedLoop().WithDriveVoltageMode().WithAzimuthPositionMode());
+    m_frontRight.ApplyControl(m_frontRight.GetControl(states[1], cosineLimit).WithDriveClosedLoop().WithDriveVoltageMode().WithAzimuthPositionMode());
+    m_backLeft.ApplyControl(m_backLeft.GetControl(states[2], cosineLimit).WithDriveClosedLoop().WithDriveVoltageMode().WithAzimuthPositionMode());
+    m_backRight.ApplyControl(m_backRight.GetControl(states[3], cosineLimit).WithDriveClosedLoop().WithDriveVoltageMode().WithAzimuthPositionMode());
 }
 
-void SwerveSubsystem::SetModulesState(wpi::array<frc::SwerveModuleState, 4> states, const std::vector<units::newton_t>& feedforwardX,
+void SwerveSubsystem::SetModulesState(wpi::array<frc::SwerveModuleState, 4> states, bool cosineLimit, const std::vector<units::newton_t>& feedforwardX,
                                       const std::vector<units::newton_t>& feedforwardY) {
     // Make sure that we are under max speed
-    Swerve::System::kDriveKinematics.DesaturateWheelSpeeds(&states, Swerve::Mechanism::kMaxMovement);
-    // Calls every swerve modules SetStates function with feedforward
-    m_frontLeft.SetState(states[0], feedforwardX.at(0), feedforwardY.at(0));
-    m_frontRight.SetState(states[1], feedforwardX.at(1), feedforwardY.at(1));
-    m_backLeft.SetState(states[2], feedforwardX.at(2), feedforwardY.at(2));
-    m_backRight.SetState(states[3], feedforwardX.at(3), feedforwardY.at(3));
+    m_driveKinematics.DesaturateWheelSpeeds(&states, Swerve::Mechanism::kMaxMovement);
+    // Calls every swerve modules SetStates function
+    m_frontLeft.ApplyControl(m_frontLeft.GetControl(states[0], cosineLimit)
+                                 .WithDriveAxisFeedforward(feedforwardX[0], feedforwardY[0])
+                                 .WithDriveClosedLoop()
+                                 .WithDriveVoltageMode()
+                                 .WithAzimuthPositionMode());
+    m_frontRight.ApplyControl(m_frontRight.GetControl(states[1], cosineLimit)
+                                  .WithDriveAxisFeedforward(feedforwardX[1], feedforwardY[1])
+                                  .WithDriveClosedLoop()
+                                  .WithDriveVoltageMode()
+                                  .WithAzimuthPositionMode());
+    m_backLeft.ApplyControl(m_backLeft.GetControl(states[2], cosineLimit)
+                                .WithDriveAxisFeedforward(feedforwardX[2], feedforwardY[2])
+                                .WithDriveClosedLoop()
+                                .WithDriveVoltageMode()
+                                .WithAzimuthPositionMode());
+    m_backRight.ApplyControl(m_backRight.GetControl(states[3], cosineLimit)
+                                 .WithDriveAxisFeedforward(feedforwardX[3], feedforwardY[3])
+                                 .WithDriveClosedLoop()
+                                 .WithDriveVoltageMode()
+                                 .WithAzimuthPositionMode());
 }
 
+void SwerveSubsystem::SetModulesState(wpi::array<frc::SwerveModuleState, 4> states, bool cosineLimit, const std::vector<units::newton_t>& linear) {
+    // Make sure that we are under max speed
+    m_driveKinematics.DesaturateWheelSpeeds(&states, Swerve::Mechanism::kMaxMovement);
+    // Calls every swerve modules SetStates function
+    m_frontLeft.ApplyControl(m_frontLeft.GetControl(states[0], cosineLimit)
+                                 .WithDriveLinearFeedforward(linear[0])
+                                 .WithDriveClosedLoop()
+                                 .WithDriveVoltageMode()
+                                 .WithAzimuthPositionMode());
+    m_frontRight.ApplyControl(m_frontRight.GetControl(states[1], cosineLimit)
+                                  .WithDriveLinearFeedforward(linear[1])
+                                  .WithDriveClosedLoop()
+                                  .WithDriveVoltageMode()
+                                  .WithAzimuthPositionMode());
+    m_backLeft.ApplyControl(m_backLeft.GetControl(states[2], cosineLimit)
+                                .WithDriveLinearFeedforward(linear[2])
+                                .WithDriveClosedLoop()
+                                .WithDriveVoltageMode()
+                                .WithAzimuthPositionMode());
+    m_backRight.ApplyControl(m_backRight.GetControl(states[3], cosineLimit)
+                                 .WithDriveLinearFeedforward(linear[3])
+                                 .WithDriveClosedLoop()
+                                 .WithDriveVoltageMode()
+                                 .WithAzimuthPositionMode());
+}
+
+void SwerveSubsystem::SetModulesState(wpi::array<frc::SwerveModuleState, 4> states, bool cosineLimit,
+                                      const std::vector<units::meters_per_second_squared_t>& accel) {
+    // Make sure that we are under max speed
+    m_driveKinematics.DesaturateWheelSpeeds(&states, Swerve::Mechanism::kMaxMovement);
+    // Calls every swerve modules SetStates function
+    m_frontLeft.ApplyControl(m_frontLeft.GetControl(states[0], cosineLimit)
+                                 .WithDriveAccelerationFeedforward(accel[0])
+                                 .WithDriveClosedLoop()
+                                 .WithDriveVoltageMode()
+                                 .WithAzimuthPositionMode());
+    m_frontRight.ApplyControl(m_frontRight.GetControl(states[1], cosineLimit)
+                                  .WithDriveAccelerationFeedforward(accel[1])
+                                  .WithDriveClosedLoop()
+                                  .WithDriveVoltageMode()
+                                  .WithAzimuthPositionMode());
+    m_backLeft.ApplyControl(m_backLeft.GetControl(states[2], cosineLimit)
+                                .WithDriveAccelerationFeedforward(accel[2])
+                                .WithDriveClosedLoop()
+                                .WithDriveVoltageMode()
+                                .WithAzimuthPositionMode());
+    m_backRight.ApplyControl(m_backRight.GetControl(states[3], cosineLimit)
+                                 .WithDriveAccelerationFeedforward(accel[3])
+                                 .WithDriveClosedLoop()
+                                 .WithDriveVoltageMode()
+                                 .WithAzimuthPositionMode());
+}
 frc::ChassisSpeeds SwerveSubsystem::GetCurrentSpeeds() {
-    return Swerve::System::kDriveKinematics.ToChassisSpeeds({m_frontLeft.GetState(), m_frontRight.GetState(), m_backLeft.GetState(), m_backRight.GetState()});
+    return m_driveKinematics.ToChassisSpeeds({m_frontLeft.GetState(), m_frontRight.GetState(), m_backLeft.GetState(), m_backRight.GetState()});
 }
 
 void SwerveSubsystem::Drive(frc::ChassisSpeeds speed) {
-    wpi::array<frc::SwerveModuleState, 4> states = Swerve::System::kDriveKinematics.ToSwerveModuleStates(speed);
-    SetModulesState(states);
+    wpi::array<frc::SwerveModuleState, 4> states = m_driveKinematics.ToSwerveModuleStates(speed);
+    SetModulesState(states, true);
 }
 
 void SwerveSubsystem::Drive(frc::ChassisSpeeds speed, const std::vector<units::newton_t>& feedforwardX, const std::vector<units::newton_t>& feedforwardY) {
-    wpi::array<frc::SwerveModuleState, 4> states = Swerve::System::kDriveKinematics.ToSwerveModuleStates(speed);
-    SetModulesState(states, feedforwardX, feedforwardY);
-}
-
-void SwerveSubsystem::Brake() {
-    m_frontLeft.Brake();
-    m_frontRight.Brake();
-    m_backLeft.Brake();
-    m_backRight.Brake();
+    wpi::array<frc::SwerveModuleState, 4> states = m_driveKinematics.ToSwerveModuleStates(speed);
+    SetModulesState(states, false, feedforwardX, feedforwardY);
 }
 
 void SwerveSubsystem::X() {
-    m_frontLeft.SetState(frc::SwerveModuleState{0_mps, frc::Rotation2d{45_deg}});
-    m_frontRight.SetState(frc::SwerveModuleState{0_mps, frc::Rotation2d{-45_deg}});
-    m_backLeft.SetState(frc::SwerveModuleState{0_mps, frc::Rotation2d{-45_deg}});
-    m_backRight.SetState(frc::SwerveModuleState{0_mps, frc::Rotation2d{45_deg}});
+    m_frontLeft.ApplyControl(SwerveModuleControl{}.WithDriveBrake().WithAzimuthPosition(45_deg));
+    m_frontRight.ApplyControl(SwerveModuleControl{}.WithDriveBrake().WithAzimuthPosition(-45_deg));
+    m_backLeft.ApplyControl(SwerveModuleControl{}.WithDriveBrake().WithAzimuthPosition(45_deg));
+    m_backRight.ApplyControl(SwerveModuleControl{}.WithDriveBrake().WithAzimuthPosition(-45_deg));
+}
+
+ctre::phoenix6::hardware::Pigeon2& SwerveSubsystem::GetGyro() {
+    return m_gyro;
+}
+
+SwerveModule& SwerveSubsystem::GetFrontLeftModule() {
+    return m_frontLeft;
+}
+
+SwerveModule& SwerveSubsystem::GetFrontRightModule() {
+    return m_frontRight;
+}
+
+SwerveModule& SwerveSubsystem::GetBackLeftModule() {
+    return m_backLeft;
+}
+
+SwerveModule& SwerveSubsystem::GetBackRightModule() {
+    return m_backRight;
+}
+
+frc::SwerveDrivePoseEstimator<4>& SwerveSubsystem::GetPoseEstimator() {
+    return m_poseEstimator;
+}
+
+frc::SwerveDriveKinematics<4>& SwerveSubsystem::GetKinematics() {
+    return m_driveKinematics;
 }
