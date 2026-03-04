@@ -1,6 +1,6 @@
-#pragma once
 #ifndef COMMAND_SWERVE_AXIS_JOYSTICK_H
 #define COMMAND_SWERVE_AXIS_JOYSTICK_H
+#pragma once
 
 #include "subsystems/SwerveSubsystem.hpp"
 

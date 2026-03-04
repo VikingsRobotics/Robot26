@@ -1,6 +1,6 @@
-#pragma once
 #ifndef COMMAND_SWERVE_POINT_JOYSTICK_H
 #define COMMAND_SWERVE_POINT_JOYSTICK_H
+#pragma once
 
 #include "subsystems/SwerveSubsystem.hpp"
 
@@ -30,7 +30,6 @@ private:
     SwerveSubsystem* const m_subsystem;
     frc::Joystick& m_joystick;
     frc::Rotation2d m_lastRotation;
-    frc::ProfiledPIDController<units::radians> m_rotationPID;
 };
 
 #endif

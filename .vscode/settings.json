@@ -114,6 +114,8 @@
     "xlocnum": "cpp",
     "xloctime": "cpp",
     "xtree": "cpp",
-    "stack": "cpp"
+    "stack": "cpp",
+    "qr": "cpp",
+    "core": "cpp"
   }
 }

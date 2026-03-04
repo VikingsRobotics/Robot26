@@ -122,25 +122,26 @@ model {
             nativeUtils.useRequiredLibrary(it, 'wpilib_shared')
         }
     }
-    testSuites {
-        frcUserProgramTest(GoogleTestTestSuiteSpec) {
-            testing $.components.frcUserProgram
-
-            sources.cpp {
-                source {
-                    srcDir 'src/test/cpp'
-                    include '**/*.cpp'
-                }
-            }
-
-            // Enable run tasks for this component
-            wpi.cpp.enableExternalTasks(it)
-
-            wpi.cpp.vendor.cpp(it)
-            wpi.cpp.deps.wpilib(it)
-            wpi.cpp.deps.googleTest(it)
-        }
-    }
+    // We really have never made use of Google's Unit Testing
+    //testSuites {
+    //    frcUserProgramTest(GoogleTestTestSuiteSpec) {
+    //        testing $.components.frcUserProgram
+    //
+    //        sources.cpp {
+    //            source {
+    //                srcDir 'src/test/cpp'
+    //                include '**/*.cpp'
+    //            }
+    //        }
+    //
+    //        // Enable run tasks for this component
+    //        wpi.cpp.enableExternalTasks(it)
+    //
+    //        wpi.cpp.vendor.cpp(it)
+    //        wpi.cpp.deps.wpilib(it)
+    //        wpi.cpp.deps.googleTest(it)
+    //    }
+    //}
 }
 
 spotless {

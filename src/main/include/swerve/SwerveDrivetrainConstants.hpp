@@ -1,0 +1,96 @@
+#ifndef SWERVE_DRIVETRAIN_CONSTANTS_H
+#define SWERVE_DRIVETRAIN_CONSTANTS_H
+#pragma once
+
+#include <ctre/phoenix6/Pigeon2.hpp>
+#include <optional>
+
+/**
+ * \brief Common constants for a swerve drivetrain.
+ */
+struct SwerveDrivetrainConstants {
+    constexpr SwerveDrivetrainConstants() = default;
+
+    /**
+     * \brief Name of the CAN bus the swerve drive is on. Possible CAN bus strings
+     * are:
+     *
+     * - "rio" for the native roboRIO CAN bus
+     * - CANivore name or serial number
+     * - SocketCAN interface (non-FRC Linux only)
+     * - "*" for any CANivore seen by the program
+     * - empty string (default) to select the default for the system:
+     *   - "rio" on roboRIO
+     *   - "can0" on Linux
+     *   - "*" on Windows
+     *
+     * Note that all devices must be on the same CAN bus.
+     */
+    std::string_view CANBusName = "";
+    /**
+     * \brief CAN ID of the Pigeon2 on the drivetrain.
+     */
+    int Pigeon2Id = 0;
+    /**
+     * \brief The configuration object to apply to the Pigeon2. This defaults to
+     * null. If this remains null, then the Pigeon2 will not be configured (and
+     * whatever configs are on it remain on it). If this is not null, the Pigeon2
+     * will be overwritten with these configs.
+     */
+    std::optional<ctre::phoenix6::configs::Pigeon2Configuration> Pigeon2Configs = std::nullopt;
+
+    /**
+     * \brief Modifies the CANBusName parameter and returns itself.
+     *
+     * Name of the CAN bus the swerve drive is on. Possible CAN bus strings are:
+     *
+     * - "rio" for the native roboRIO CAN bus
+     * - CANivore name or serial number
+     * - SocketCAN interface (non-FRC Linux only)
+     * - "*" for any CANivore seen by the program
+     * - empty string (default) to select the default for the system:
+     *   - "rio" on roboRIO
+     *   - "can0" on Linux
+     *   - "*" on Windows
+     *
+     * Note that all devices must be on the same CAN bus.
+     *
+     * \param newCANBusName Parameter to modify
+     * \returns this object
+     */
+    constexpr SwerveDrivetrainConstants& WithCANBusName(std::string_view newCANBusName) {
+        this->CANBusName = newCANBusName;
+        return *this;
+    }
+
+    /**
+     * \brief Modifies the Pigeon2Id parameter and returns itself.
+     *
+     * CAN ID of the Pigeon2 on the drivetrain.
+     *
+     * \param newPigeon2Id Parameter to modify
+     * \returns this object
+     */
+    constexpr SwerveDrivetrainConstants& WithPigeon2Id(int newPigeon2Id) {
+        this->Pigeon2Id = newPigeon2Id;
+        return *this;
+    }
+
+    /**
+     * \brief Modifies the Pigeon2Configs parameter and returns itself.
+     *
+     * The configuration object to apply to the Pigeon2. This defaults to null. If
+     * this remains null, then the Pigeon2 will not be configured (and whatever
+     * configs are on it remain on it). If this is not null, the Pigeon2 will be
+     * overwritten with these configs.
+     *
+     * \param newPigeon2Configs Parameter to modify
+     * \returns this object
+     */
+    constexpr SwerveDrivetrainConstants& WithPigeon2Configs(const std::optional<ctre::phoenix6::configs::Pigeon2Configuration>& newPigeon2Configs) {
+        this->Pigeon2Configs = newPigeon2Configs;
+        return *this;
+    }
+};
+
+#endif

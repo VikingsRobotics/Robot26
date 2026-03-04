@@ -1,6 +1,6 @@
-#pragma once
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
+#pragma once
 
 #include <pathplanner/lib/config/PIDConstants.h>
 
@@ -30,14 +30,16 @@
 
 #include <numbers>
 
-#include "constants/SwerveModuleConfig.hpp"
+#include "swerve/SwerveDrivetrainConstants.hpp"
+#include "swerve/SwerveModuleConstants.hpp"
 
 namespace DeviceIdentifier {
 // CTRE: CANBus Name for contructors of CRTE software classes
 constexpr ctre::phoenix6::CANBus kCANBus{""};
 // REV: PDH
 constexpr int kPDHId = 1;
-
+// REV: PCM
+constexpr int kPCMId = 2;
 // CTRE: CANBus Pigeon2 ID
 constexpr int kGyroId = 3;
 // CTRE: Falcon 500 Front Left Motor ID
@@ -106,50 +108,75 @@ constexpr units::inch_t kTrackWidth = 27.5_in;
 }  // namespace Mechanism
 
 namespace DeviceProperties {
-inline SwerveModuleConfigs kFrontLeft =
-    SwerveModuleConfigs{DeviceIdentifier::kFLDriveMotorId, DeviceIdentifier::kFLAngleMotorId}
-        .WithAzimuthGearRatio(Mechanism::kAzimuthGearRatio)
-        .WithDriveGearRatio(Mechanism::kDriveGearRatio)
-        .WithCouplingRatio(Mechanism::kCouplingRatio)
-        .WithDriveWheelCircumference(Mechanism::kWheelCircumference)
-        .WithMaxDriveMotorSpeed(Mechanism::kMaxMovement)
-        .WithMaxDriveMotorAcceleration(5_mps_sq)
-        .WithMaxDriveMotorJerk(SwerveModuleConfigs::meters_per_sec_cu_t{5})
-        .WithMaxAzimuthMotorSpeed(Mechanism::kMaxRotation)
-        .WithMaxAzimuthMotorAcceleration(3.9_tr_per_s_sq)
-        .WithInvertedEncoder(true)
-        .WithMusicDuringDisable(true)
-        .WithResetPositionOnConfig(true)
-        .WithAzimuthMotorPID(Gains::DutyCyclePIDRotationMs{units::dimensionless::scalar_t{1} / 1_tr, units::dimensionless::scalar_t{0} / (1_tr * 1_ms),
-                                                           units::dimensionless::scalar_t{0} / (1_tr / 1_ms)})
-        .WithAzimuthMotorFF(Gains::VoltageFFRevolution{0_V, 0_V / 1_rpm, 0_V / 1_rev_per_m_per_s})
-        .WithDriveMagicVA((12_V * 1_s) / 108_m, (0_V * 1_s * 1_s) / 1_m)
-        .WithDriveMotorDutyGain(Gains::DutyCycleGainDistance{
-            Gains::DutyCyclePIDDistance{units::dimensionless::scalar_t{0.0833} / 1_m, units::dimensionless::scalar_t{0} / (1_m * 1_s),
-                                        units::dimensionless::scalar_t{0} / (1_m / 1_s)},
-            Gains::DutyCycleFFDistance{units::dimensionless::scalar_t{0}, units::dimensionless::scalar_t{0} / 1_mps,
-                                       units::dimensionless::scalar_t{0} / 1_mps_sq}})
-        .WithDriveMotorVoltageGain(Gains::VoltageGainDistance{Gains::VoltagePIDDistance{1_V / 1_m, 0_V / (1_m * 1_s), 0_V / (1_m / 1_s)},
-                                                              Gains::VoltageFFDistance{0_V, 0_V / 1_mps, 0_V / 1_mps_sq}})
-        .WithDriveMotorTorqueGain(Gains::TorqueGainDistance{Gains::TorquePIDDistance{21.4166_A / 1_m, 0_A / (1_m * 1_s), 0_A / (1_m / 1_s)},
-                                                            Gains::TorqueFFDistance{0_A, 0_A / 1_mps, 0_A / 1_mps_sq}})
-        .WithModuleOffset(frc::Translation2d{+Mechanism::kWheelBase / 2, +Mechanism::kTrackWidth / 2})
-        .WithRotationalOffset(-0.25_tr);
+constexpr SwerveModuleConstants kFrontLeft =
+    SwerveModuleConstants{}
+        .WithCouplingGearRatio(Mechanism::kCouplingRatio)
+        .WithDriveMotorGearRatio(Mechanism::kDriveGearRatio)
+        .WithSteerMotorGearRatio(Mechanism::kAzimuthGearRatio)
+        .WithWheelRadius(Mechanism::kWheelDiameter / 2)
+        .WithEncoderInverted(true)
+        .WithDriveMotorInverted(false)
+        .WithSteerMotorInverted(false)
+        .WithSpeedAt12Volts(Mechanism::kMaxMovement)
+        .WithSlipCurrent(800_A)
+        .WithDriveMotorGains(ctre::phoenix6::configs::Slot0Configs{}
+                                 .WithKP(0.1)
+                                 .WithKI(0.0)
+                                 .WithKD(0.0)
+                                 .WithKS(0.15)
+                                 .WithKV(0.00188)
+                                 .WithKA(0.0)
+                                 .WithKG(0.0)
+                                 .WithGravityType(ctre::phoenix6::signals::GravityTypeValue::Elevator_Static)
+                                 .WithStaticFeedforwardSign(ctre::phoenix6::signals::StaticFeedforwardSignValue::UseVelocitySign))
+        .WithSteerMotorGains(SwerveModuleConstants::Slot0ConfigsRev{.kP = 1.0,
+                                                                    .kI = 0.0,
+                                                                    .kD = 0.0,
+                                                                    .dFilter = 0.0,
+                                                                    .iZone = 0.0,
+                                                                    .iMaxAccum = 0.0,
+                                                                    .minOut = -1.0,
+                                                                    .maxOut = 1.0,
+                                                                    .posWrapEnabled = true,
+                                                                    .posMinInput = 0.0,
+                                                                    .posMaxInput = 1.0,
+                                                                    .sensor = rev::spark::FeedbackSensor::kAbsoluteEncoder,
+                                                                    .cruiseVelocity = Mechanism::kMaxRotation(),
+                                                                    .maxAcceleration = 3_tr_per_s_sq(),
+                                                                    .allowedError = 0.5,
+                                                                    .kS = 0.0,
+                                                                    .kV = 0.0,
+                                                                    .kA = 0.0})
+        .WithDriveMotorId(DeviceIdentifier::kFLDriveMotorId)
+        .WithSteerMotorId(DeviceIdentifier::kFLAngleMotorId)
+        .WithLocationX(+Mechanism::kWheelBase / 2)
+        .WithLocationY(+Mechanism::kTrackWidth / 2)
+        .WithEncoderOffset(-0.25_tr);
+;
 
-inline SwerveModuleConfigs kFrontRight = SwerveModuleConfigs{DeviceIdentifier::kFRDriveMotorId, DeviceIdentifier::kFRAngleMotorId}
-                                             .Apply(kFrontLeft)
-                                             .WithModuleOffset(frc::Translation2d{+Mechanism::kWheelBase / 2, -Mechanism::kTrackWidth / 2})
-                                             .WithRotationalOffset(0_tr);
+constexpr SwerveModuleConstants kFrontRight = SwerveModuleConstants{kFrontLeft}
+                                                  .WithDriveMotorId(DeviceIdentifier::kFRDriveMotorId)
+                                                  .WithSteerMotorId(DeviceIdentifier::kFRAngleMotorId)
+                                                  .WithLocationX(+Mechanism::kWheelBase / 2)
+                                                  .WithLocationY(-Mechanism::kTrackWidth / 2)
+                                                  .WithEncoderOffset(+0.00_tr);
 
-inline SwerveModuleConfigs kBackLeft = SwerveModuleConfigs{DeviceIdentifier::kBLDriveMotorId, DeviceIdentifier::kBLAngleMotorId}
-                                           .Apply(kFrontLeft)
-                                           .WithModuleOffset(frc::Translation2d{-Mechanism::kWheelBase / 2, +Mechanism::kTrackWidth / 2})
-                                           .WithRotationalOffset(0.5_tr);
+constexpr SwerveModuleConstants kBackLeft = SwerveModuleConstants{kFrontLeft}
+                                                .WithDriveMotorId(DeviceIdentifier::kBLDriveMotorId)
+                                                .WithSteerMotorId(DeviceIdentifier::kBLAngleMotorId)
+                                                .WithLocationX(-Mechanism::kWheelBase / 2)
+                                                .WithLocationY(+Mechanism::kTrackWidth / 2)
+                                                .WithEncoderOffset(+0.50_tr);
 
-inline SwerveModuleConfigs kBackRight = SwerveModuleConfigs{DeviceIdentifier::kBRDriveMotorId, DeviceIdentifier::kBRAngleMotorId}
-                                            .Apply(kFrontLeft)
-                                            .WithModuleOffset(frc::Translation2d{-Mechanism::kWheelBase / 2, -Mechanism::kTrackWidth / 2})
-                                            .WithRotationalOffset(0.25_tr);
+constexpr SwerveModuleConstants kBackRight = SwerveModuleConstants{kFrontLeft}
+                                                 .WithDriveMotorId(DeviceIdentifier::kBRDriveMotorId)
+                                                 .WithSteerMotorId(DeviceIdentifier::kBRAngleMotorId)
+                                                 .WithLocationX(-Mechanism::kWheelBase / 2)
+                                                 .WithLocationY(-Mechanism::kTrackWidth / 2)
+                                                 .WithEncoderOffset(+0.25_tr);
+
+constexpr SwerveDrivetrainConstants kDrivetrain =
+    SwerveDrivetrainConstants{}.WithPigeon2Id(DeviceIdentifier::kGyroId).WithPigeon2Configs(std::nullopt).WithCANBusName("");
 
 }  // namespace DeviceProperties
 
@@ -174,19 +201,15 @@ constexpr units::hertz_t kDirLimiter = 1 / 1_s;
 constexpr double kDriveDeadband = 0.15;
 // Minimum percent of joystick twist distance before robot response (angle)
 constexpr double kDriveAngleDeadband = 0.15;
-// Maximum speed that the robot will move (limited by physical design)
+// Maximum speed that the robot will move
 constexpr units::meters_per_second_t kDriveMoveSpeedMax = 3.0_mps;
+// Maximum accel that the robot will move
+constexpr units::meters_per_second_squared_t kDriveMoveAccelMax = 3.0_mps_sq;
+// Maximum turning speed that the robot will move
+constexpr units::turns_per_second_t kDriveAngleSpeedMax = 1_tps;
+// Maximum turning accel that the robot will move
+constexpr units::turns_per_second_squared_t kDriveAngleAccelMax = 1_tr_per_s_sq;
 
-// Maximum turning speed that the robot will move (limited by physical design)
-constexpr units::radians_per_second_t kDriveAngleSpeedMax = 3.0_rad_per_s;
-// Maximum turning speed that the robot will move (limited by physical design)
-constexpr units::radians_per_second_squared_t kDriveAngleAccelMax = 5.0_rad_per_s_sq;
-
-inline Gains::PIDConstants<units::radians_per_second_t,units::radian_t,units::second_t> kLookPID {
-    0.8_rad_per_s / 1_rad,
-    0.0_rad_per_s / (1.0_rad * 1_s),
-    0.0_rad_per_s / (1.0_rad / 1_s)
-};
 }  // namespace TeleopOperator
 
 namespace Auto {

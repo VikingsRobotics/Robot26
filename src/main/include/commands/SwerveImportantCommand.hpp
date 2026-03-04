@@ -1,6 +1,6 @@
-#pragma once
 #ifndef COMMAND_SWERVE_IMPORTANT_H
 #define COMMAND_SWERVE_IMPORTANT_H
+#pragma once
 
 #include "subsystems/SwerveSubsystem.hpp"
 

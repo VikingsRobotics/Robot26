@@ -8,6 +8,8 @@
 
 #include <frc2/command/RunCommand.h>
 
+#include "swerve/SwerveRequest.hpp"
+
 SwerveJoystickAxisLimitedCommand::SwerveJoystickAxisLimitedCommand(SwerveSubsystem* const subsystem, frc2::CommandJoystick& joystick)
     : m_subsystem{subsystem},
       m_joystick{joystick.GetHID()},
@@ -33,10 +35,10 @@ void SwerveJoystickAxisLimitedCommand::Execute() {
         m_fieldCentric = !m_fieldCentric;
     }
     if (m_joystick.GetRawButtonPressed(5)) {
-        m_subsystem->ZeroHeading();
+        m_subsystem->SeedFieldCentric();
     }
     if (m_joystick.GetRawButton(1)) {
-        m_subsystem->StopModules();
+        m_subsystem->SetControl(SwerveDriveBrake{});
         return;
     }
 
@@ -73,20 +75,26 @@ void SwerveJoystickAxisLimitedCommand::Execute() {
     vy = renormalizedY * throttle * Swerve::TeleopOperator::kDriveMoveSpeedMax;
     va = renormalizedA * Swerve::TeleopOperator::kDriveAngleSpeedMax;
 
-    frc::ChassisSpeeds speeds{};
     if (m_fieldCentric) {
-        speeds = frc::ChassisSpeeds::FromFieldRelativeSpeeds(vx, vy, va, m_subsystem->GetHeading());
+        m_subsystem->SetControl(FieldCentric{}
+                                    .WithVelocityX(vx)
+                                    .WithVelocityY(vy)
+                                    .WithRotationalRate(va)
+                                    .WithDriveRequestType(ModuleDriveRequestType::Velocity)
+                                    .WithSteerRequestType(ModuleSteerRequestType::Position)
+                                    .WithForwardPerspective(ForwardPerspectiveValue::OperatorPerspective));
     } else {
-        speeds = frc::ChassisSpeeds{vx, vy, va};
+        m_subsystem->SetControl(RobotCentric{}
+                                    .WithVelocityX(vx)
+                                    .WithVelocityY(vy)
+                                    .WithRotationalRate(va)
+                                    .WithDriveRequestType(ModuleDriveRequestType::Velocity)
+                                    .WithSteerRequestType(ModuleSteerRequestType::Position));
     }
-
-    wpi::array<frc::SwerveModuleState, 4> swerveModule = m_subsystem->GetKinematics().ToSwerveModuleStates(speeds);
-
-    m_subsystem->SetModulesState(swerveModule, true);
 }
 
 void SwerveJoystickAxisLimitedCommand::End(bool interrupted) {
-    m_subsystem->StopModules();
+    m_subsystem->SetControl(SwerveDriveBrake{});
 }
 
 bool SwerveJoystickAxisLimitedCommand::IsFinished() {

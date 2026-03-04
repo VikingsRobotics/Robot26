@@ -32,7 +32,10 @@ void Robot::AutonomousPeriodic() {}
 void Robot::AutonomousExit() {}
 
 void Robot::TeleopInit() {
-    m_container.swerveSubsystem.SetOperatorPerspective(frc::DriverStation::GetAlliance().value_or(frc::DriverStation::Alliance::kBlue) == frc::DriverStation::Alliance::kBlue ? 0_tr : 0.5_tr);
+    m_container.swerveSubsystem.SetOperatorPerspectiveForward(frc::DriverStation::GetAlliance().value_or(frc::DriverStation::Alliance::kBlue) ==
+                                                                      frc::DriverStation::Alliance::kBlue ?
+                                                                  frc::Rotation3d{} :
+                                                                  frc::Rotation3d{frc::Rotation2d{0.5_tr}});
 
     if (m_autonomousCommand) {
         frc2::CommandScheduler::GetInstance().Cancel(m_autonomousCommand);

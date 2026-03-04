@@ -2,25 +2,26 @@
 #ifndef SUBSYSTEM_SWERVE_H
 #define SUBSYSTEM_SWERVE_H
 
-#include "subsystems/SwerveModule.hpp"
-
-#include "Constants.hpp"
-
-#include <optional>
 #include <vector>
 
-#include <ctre/phoenix6/Pigeon2.hpp>
-
 #include <frc/smartdashboard/Field2d.h>
-
-#include <frc/kinematics/ChassisSpeeds.h>
-
-#include <frc/estimator/SwerveDrivePoseEstimator.h>
+#include <frc/smartdashboard/Mechanism2d.h>
+#include <frc/smartdashboard/MechanismLigament2d.h>
+#include <frc/util/Color8Bit.h>
 
 #include <frc2/command/SubsystemBase.h>
 
+#include <networktables/NetworkTable.h>
+#include <networktables/StructTopic.h>
+#include <networktables/StructArrayTopic.h>
+#include <networktables/DoubleTopic.h>
+#include <networktables/DoubleArrayTopic.h>
 
-class SwerveSubsystem : public frc2::SubsystemBase {
+
+#include "swerve/SwerveDrivetrain.hpp"
+
+
+class SwerveSubsystem : public frc2::SubsystemBase, public SwerveDrivetrain {
 public:
     SwerveSubsystem();
     SwerveSubsystem(SwerveSubsystem& rhs) = delete;
@@ -30,73 +31,85 @@ public:
 
     void Periodic() override;
 
-    void ZeroHeading();
-
-    void SetOperatorPerspective(units::turn_t perspective);
-
-    units::degree_t GetHeading();
-
-    units::degree_t GetOperatorHeading();
-    
-    frc::Rotation2d GetRotation2d();
-
-    frc::Pose2d GetPose2d();
-
-    void ResetOdometry(frc::Pose2d pose);
-
-    void StopModules();
-
-    void SetModulesState(wpi::array<frc::SwerveModuleState, 4> states, bool cosineLimit);
-
-
-    void SetModulesState(wpi::array<frc::SwerveModuleState, 4> states, bool cosineLimit, const std::vector<units::newton_t>& feedforwardX,
-                         const std::vector<units::newton_t>& feedforwardY);
-    void SetModulesState(wpi::array<frc::SwerveModuleState, 4> states, bool cosineLimit, const std::vector<units::newton_t>& linear);
-    void SetModulesState(wpi::array<frc::SwerveModuleState, 4> states, bool cosineLimit, const std::vector<units::meters_per_second_squared_t>& accel);
-
-    frc::ChassisSpeeds GetCurrentSpeeds();
-
-    void Drive(frc::ChassisSpeeds speed);
-    void Drive(frc::ChassisSpeeds speed, const std::vector<units::newton_t>& feedforwardX, const std::vector<units::newton_t>& feedforwardY);
-
-    void X();
-
-    ctre::phoenix6::hardware::Pigeon2& GetGyro();
-    SwerveModule& GetFrontLeftModule();
-    SwerveModule& GetFrontRightModule();
-    SwerveModule& GetBackLeftModule();
-    SwerveModule& GetBackRightModule();
-
-    frc::SwerveDrivePoseEstimator<4>& GetPoseEstimator();
-    frc::SwerveDriveKinematics<4>& GetKinematics();
+public:
+    using SwerveDrivetrain::AddVisionMeasurement;
+    using SwerveDrivetrain::GetKinematics;
+    using SwerveDrivetrain::GetModule;
+    using SwerveDrivetrain::GetModuleLocations;
+    using SwerveDrivetrain::GetModules;
+    using SwerveDrivetrain::GetOdometryFrequency;
+    using SwerveDrivetrain::GetOdometryThread;
+    using SwerveDrivetrain::GetOperatorForwardDirection;
+    using SwerveDrivetrain::GetPigeon2;
+    using SwerveDrivetrain::GetState;
+    using SwerveDrivetrain::IsOdometryValid;
+    using SwerveDrivetrain::RegisterTelemetry;
+    using SwerveDrivetrain::ResetPose;
+    using SwerveDrivetrain::ResetRotation;
+    using SwerveDrivetrain::ResetTranslation;
+    using SwerveDrivetrain::RunTempRequest;
+    using SwerveDrivetrain::SamplePoseAt;
+    using SwerveDrivetrain::SeedFieldCentric;
+    using SwerveDrivetrain::SetControl;
+    using SwerveDrivetrain::SetOperatorPerspectiveForward;
+    using SwerveDrivetrain::SetStateStdDevs;
+    using SwerveDrivetrain::SetVisionMeasurementStdDevs;
+    using SwerveDrivetrain::TareEverything;
 
 private:
-    // Gryo used for odometry and for field centric control
-    ctre::phoenix6::hardware::Pigeon2 m_gyro{DeviceIdentifier::kGyroId, DeviceIdentifier::kCANBus};
-    std::function<units::angle::degree_t()> m_getGyroYaw;
-    // Front Left module
-    SwerveModule m_frontLeft{Swerve::DeviceProperties::kFrontLeft};
-    // Front Right module
-    SwerveModule m_frontRight{Swerve::DeviceProperties::kFrontRight};
-    // Back Left module
-    SwerveModule m_backLeft{Swerve::DeviceProperties::kBackLeft};
-    // Back Right module
-    SwerveModule m_backRight{Swerve::DeviceProperties::kBackRight};
-    // Kinematics matrix stuff
-    frc::SwerveDriveKinematics<4> m_driveKinematics{Swerve::DeviceProperties::kFrontLeft.kModuleTranslation, Swerve::DeviceProperties::kFrontRight.kModuleTranslation,
-                                                       Swerve::DeviceProperties::kBackLeft.kModuleTranslation, Swerve::DeviceProperties::kBackRight.kModuleTranslation};
-    // Track the position of the robot using wheel position and gryo rotation
-    frc::SwerveDrivePoseEstimator<4> m_poseEstimator{
-        m_driveKinematics,
-        frc::Rotation2d{},
-        {m_frontLeft.GetPosition(), m_frontRight.GetPosition(), m_backLeft.GetPosition(), m_backRight.GetPosition()},
-        frc::Pose2d{},
-        {0.1, 0.1, 0.1},
-        {0.1, 0.1, 0.1}};
+    void Telemeterize(SwerveDriveState const& state);
+
+private:
     frc::Field2d m_field{};
     frc::Field2d m_pose{};
 
-    units::turn_t m_operatorPerspective = 0_tr;
+private:
+    units::meters_per_second_t MaxSpeed;
+
+    /* What to publish over networktables for telemetry */
+    nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
+
+    /* Robot swerve drive state */
+    std::shared_ptr<nt::NetworkTable> driveStateTable = inst.GetTable("DriveState");
+    nt::StructPublisher<frc::Pose3d> drivePose = driveStateTable->GetStructTopic<frc::Pose3d>("Pose").Publish();
+    nt::StructPublisher<frc::ChassisSpeeds> driveSpeeds = driveStateTable->GetStructTopic<frc::ChassisSpeeds>("Speeds").Publish();
+    nt::StructArrayPublisher<frc::SwerveModuleState> driveModuleStates = driveStateTable->GetStructArrayTopic<frc::SwerveModuleState>("ModuleStates").Publish();
+    nt::StructArrayPublisher<frc::SwerveModuleState> driveModuleTargets =
+        driveStateTable->GetStructArrayTopic<frc::SwerveModuleState>("ModuleTargets").Publish();
+    nt::StructArrayPublisher<frc::SwerveModulePosition> driveModulePositions =
+        driveStateTable->GetStructArrayTopic<frc::SwerveModulePosition>("ModulePositions").Publish();
+    nt::DoublePublisher driveTimestamp = driveStateTable->GetDoubleTopic("Timestamp").Publish();
+    nt::DoublePublisher driveOdometryFrequency = driveStateTable->GetDoubleTopic("OdometryFrequency").Publish();
+
+    /* Mechanisms to represent the swerve module states */
+    std::array<frc::Mechanism2d, 4> m_moduleMechanisms{
+        frc::Mechanism2d{1, 1},
+        frc::Mechanism2d{1, 1},
+        frc::Mechanism2d{1, 1},
+        frc::Mechanism2d{1, 1},
+    };
+    /* A direction and length changing ligament for speed representation */
+    std::array<frc::MechanismLigament2d*, 4> m_moduleSpeeds{
+        m_moduleMechanisms[0].GetRoot("RootSpeed", 0.5, 0.5)->Append<frc::MechanismLigament2d>("Speed", 0.5, 0_deg),
+        m_moduleMechanisms[1].GetRoot("RootSpeed", 0.5, 0.5)->Append<frc::MechanismLigament2d>("Speed", 0.5, 0_deg),
+        m_moduleMechanisms[2].GetRoot("RootSpeed", 0.5, 0.5)->Append<frc::MechanismLigament2d>("Speed", 0.5, 0_deg),
+        m_moduleMechanisms[3].GetRoot("RootSpeed", 0.5, 0.5)->Append<frc::MechanismLigament2d>("Speed", 0.5, 0_deg),
+    };
+    /* A direction changing and length constant ligament for module direction */
+    std::array<frc::MechanismLigament2d*, 4> m_moduleDirections{
+        m_moduleMechanisms[0]
+            .GetRoot("RootDirection", 0.5, 0.5)
+            ->Append<frc::MechanismLigament2d>("Direction", 0.1, 0_deg, 0, frc::Color8Bit{frc::Color::kWhite}),
+        m_moduleMechanisms[1]
+            .GetRoot("RootDirection", 0.5, 0.5)
+            ->Append<frc::MechanismLigament2d>("Direction", 0.1, 0_deg, 0, frc::Color8Bit{frc::Color::kWhite}),
+        m_moduleMechanisms[2]
+            .GetRoot("RootDirection", 0.5, 0.5)
+            ->Append<frc::MechanismLigament2d>("Direction", 0.1, 0_deg, 0, frc::Color8Bit{frc::Color::kWhite}),
+        m_moduleMechanisms[3]
+            .GetRoot("RootDirection", 0.5, 0.5)
+            ->Append<frc::MechanismLigament2d>("Direction", 0.1, 0_deg, 0, frc::Color8Bit{frc::Color::kWhite}),
+    };
 };
 
 #endif
