@@ -51,13 +51,13 @@ constexpr int kFRDriveMotorId = 8;
 // REV: Neo 550 Front Right Angle Motor ID
 constexpr int kFRAngleMotorId = 9;
 // CTRE: Falcon 500 Back Left Motor ID
-constexpr int kBLDriveMotorId = 4;
+constexpr int kBLDriveMotorId = 10;
 // REV: Neo 550 Back Left Angle Motor ID
-constexpr int kBLAngleMotorId = 5;
+constexpr int kBLAngleMotorId = 11;
 // CTRE: Falcon 500 Back Right Motor ID
-constexpr int kBRDriveMotorId = 10;
+constexpr int kBRDriveMotorId = 12;
 // REV: Neo 550 Back Right Angle Motor ID
-constexpr int kBRAngleMotorId = 11;
+constexpr int kBRAngleMotorId = 13;
 }  // namespace DeviceIdentifier
 
 namespace Swerve {

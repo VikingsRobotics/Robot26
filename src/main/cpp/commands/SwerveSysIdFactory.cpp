@@ -2,7 +2,6 @@
 #include "swerve/SwerveRequest.hpp"
 #include <memory>
 
-
 static constexpr frc2::sysid::Direction ConvertDirectionToFRC(SwerveSysIdFactory::Direction direction) {
     return direction == SwerveSysIdFactory::Direction::kForward ? frc2::sysid::Direction::kForward : frc2::sysid::kReverse;
 }
@@ -12,31 +11,31 @@ frc2::CommandPtr SwerveSysIdFactory::Translation(SwerveSubsystem* subsystem, Dir
         frc2::sysid::Config{configs.rampRate, configs.stepVoltage, configs.timeout, nullptr},
         frc2::sysid::Mechanism{[subsystem](units::volt_t volt) { subsystem->SetControl(SysIdSwerveTranslation{}.WithVolts(volt)); },
                                [subsystem](frc::sysid::SysIdRoutineLog* log) {
-                                   std::span<std::unique_ptr<SwerveModule>, 4> modules = subsystem->GetModules();
+                                   std::array<SwerveModule::CacheState, 4> states = subsystem->GetModulesCachedStates();
                                    log->Motor("Front Left")
-                                       .voltage(modules[0]->GetDriveMotor().GetMotorVoltage().GetValue())
-                                       .current(modules[0]->GetDriveMotor().GetTorqueCurrent().GetValue())
-                                       .position(modules[0]->GetDriveMotor().GetPosition().GetValue())
-                                       .velocity(modules[0]->GetDriveMotor().GetVelocity().GetValue())
-                                       .acceleration(modules[0]->GetDriveMotor().GetAcceleration().GetValue());
+                                       .voltage(states[0].drive.voltage)
+                                       .current(states[0].drive.current)
+                                       .position(states[0].drive.position)
+                                       .velocity(states[0].drive.velocity)
+                                       .acceleration(states[0].drive.acceleration);
                                    log->Motor("Front Right")
-                                       .voltage(modules[1]->GetDriveMotor().GetMotorVoltage().GetValue())
-                                       .current(modules[1]->GetDriveMotor().GetTorqueCurrent().GetValue())
-                                       .position(modules[1]->GetDriveMotor().GetPosition().GetValue())
-                                       .velocity(modules[1]->GetDriveMotor().GetVelocity().GetValue())
-                                       .acceleration(modules[1]->GetDriveMotor().GetAcceleration().GetValue());
+                                       .voltage(states[1].drive.voltage)
+                                       .current(states[1].drive.current)
+                                       .position(states[1].drive.position)
+                                       .velocity(states[1].drive.velocity)
+                                       .acceleration(states[1].drive.acceleration);
                                    log->Motor("Back Left")
-                                       .voltage(modules[2]->GetDriveMotor().GetMotorVoltage().GetValue())
-                                       .current(modules[2]->GetDriveMotor().GetTorqueCurrent().GetValue())
-                                       .position(modules[2]->GetDriveMotor().GetPosition().GetValue())
-                                       .velocity(modules[2]->GetDriveMotor().GetVelocity().GetValue())
-                                       .acceleration(modules[2]->GetDriveMotor().GetAcceleration().GetValue());
+                                       .voltage(states[2].drive.voltage)
+                                       .current(states[2].drive.current)
+                                       .position(states[2].drive.position)
+                                       .velocity(states[2].drive.velocity)
+                                       .acceleration(states[2].drive.acceleration);
                                    log->Motor("Back Right")
-                                       .voltage(modules[3]->GetDriveMotor().GetMotorVoltage().GetValue())
-                                       .current(modules[3]->GetDriveMotor().GetTorqueCurrent().GetValue())
-                                       .position(modules[3]->GetDriveMotor().GetPosition().GetValue())
-                                       .velocity(modules[3]->GetDriveMotor().GetVelocity().GetValue())
-                                       .acceleration(modules[3]->GetDriveMotor().GetAcceleration().GetValue());
+                                       .voltage(states[3].drive.voltage)
+                                       .current(states[3].drive.current)
+                                       .position(states[3].drive.position)
+                                       .velocity(states[3].drive.velocity)
+                                       .acceleration(states[3].drive.acceleration);
                                },
                                subsystem, "Sysid-Swerve-Translation"}};
 
@@ -52,27 +51,27 @@ frc2::CommandPtr SwerveSysIdFactory::Steer(SwerveSubsystem* subsystem, Direction
         frc2::sysid::Config{configs.rampRate, configs.stepVoltage, configs.timeout, nullptr},
         frc2::sysid::Mechanism{[subsystem](units::volt_t volt) { subsystem->SetControl(SysIdSwerveSteerGains{}.WithVolts(volt)); },
                                [subsystem](frc::sysid::SysIdRoutineLog* log) {
-                                   std::span<std::unique_ptr<SwerveModule>, 4> modules = subsystem->GetModules();
+                                   std::array<SwerveModule::CacheState, 4> states = subsystem->GetModulesCachedStates();
                                    log->Motor("Front Left")
-                                       .voltage(units::volt_t{modules[0]->GetAzimuthMotor().GetBusVoltage() * modules[0]->GetAzimuthMotor().GetAppliedOutput()})
-                                       .current(units::ampere_t{modules[0]->GetAzimuthMotor().GetOutputCurrent()})
-                                       .position(units::turn_t{modules[0]->GetAzimuthEncoder().GetPosition()})
-                                       .velocity(units::turns_per_second_t{modules[0]->GetAzimuthEncoder().GetVelocity()});
+                                       .voltage(states[0].azimuth.voltage)
+                                       .current(states[0].azimuth.current)
+                                       .position(states[0].azimuth.position)
+                                       .velocity(states[0].azimuth.velocity);
                                    log->Motor("Front Right")
-                                       .voltage(units::volt_t{modules[1]->GetAzimuthMotor().GetBusVoltage() * modules[1]->GetAzimuthMotor().GetAppliedOutput()})
-                                       .current(units::ampere_t{modules[1]->GetAzimuthMotor().GetOutputCurrent()})
-                                       .position(units::turn_t{modules[1]->GetAzimuthEncoder().GetPosition()})
-                                       .velocity(units::turns_per_second_t{modules[1]->GetAzimuthEncoder().GetVelocity()});
+                                       .voltage(states[1].azimuth.voltage)
+                                       .current(states[1].azimuth.current)
+                                       .position(states[1].azimuth.position)
+                                       .velocity(states[1].azimuth.velocity);
                                    log->Motor("Back Left")
-                                       .voltage(units::volt_t{modules[2]->GetAzimuthMotor().GetBusVoltage() * modules[2]->GetAzimuthMotor().GetAppliedOutput()})
-                                       .current(units::ampere_t{modules[2]->GetAzimuthMotor().GetOutputCurrent()})
-                                       .position(units::turn_t{modules[2]->GetAzimuthEncoder().GetPosition()})
-                                       .velocity(units::turns_per_second_t{modules[2]->GetAzimuthEncoder().GetVelocity()});
+                                       .voltage(states[2].azimuth.voltage)
+                                       .current(states[2].azimuth.current)
+                                       .position(states[2].azimuth.position)
+                                       .velocity(states[2].azimuth.velocity);
                                    log->Motor("Back Right")
-                                       .voltage(units::volt_t{modules[3]->GetAzimuthMotor().GetBusVoltage() * modules[3]->GetAzimuthMotor().GetAppliedOutput()})
-                                       .current(units::ampere_t{modules[3]->GetAzimuthMotor().GetOutputCurrent()})
-                                       .position(units::turn_t{modules[3]->GetAzimuthEncoder().GetPosition()})
-                                       .velocity(units::turns_per_second_t{modules[3]->GetAzimuthEncoder().GetVelocity()});
+                                       .voltage(states[3].azimuth.voltage)
+                                       .current(states[3].azimuth.current)
+                                       .position(states[3].azimuth.position)
+                                       .velocity(states[3].azimuth.velocity);
                                },
                                subsystem, "Sysid-Swerve-Steer"}};
 
@@ -92,16 +91,18 @@ frc2::CommandPtr SwerveSysIdFactory::Rotation(SwerveSubsystem* subsystem, Direct
                                                                  subsystem->SetControl(SysIdSwerveRotation{}.WithRotationalRate(volt * 1_tr / (1_V * 1_s)));
                                                              },
                                                              [outputRate, subsystem](frc::sysid::SysIdRoutineLog* log) {
+                                                                 SwerveModule::CacheState state = subsystem->GetModule(0).GetCachedState();
+
                                                                  log->Motor("System")
                                                                      .voltage(outputRate->load(std::memory_order::relaxed))
                                                                      .position(subsystem->GetPigeon2().GetYaw().GetValue())
                                                                      .velocity(subsystem->GetPigeon2().GetAngularVelocityZWorld().GetValue());
                                                                  log->Motor("Motor")
-                                                                     .voltage(subsystem->GetModule(0).GetDriveMotor().GetMotorVoltage().GetValue())
-                                                                     .current(subsystem->GetModule(0).GetDriveMotor().GetTorqueCurrent().GetValue())
-                                                                     .position(subsystem->GetModule(0).GetDriveMotor().GetPosition().GetValue())
-                                                                     .velocity(subsystem->GetModule(0).GetDriveMotor().GetVelocity().GetValue())
-                                                                     .acceleration(subsystem->GetModule(0).GetDriveMotor().GetAcceleration().GetValue());
+                                                                     .voltage(state.drive.voltage)
+                                                                     .current(state.drive.current)
+                                                                     .position(state.drive.position)
+                                                                     .velocity(state.drive.velocity)
+                                                                     .acceleration(state.drive.acceleration);
                                                              },
                                                              subsystem, "Sysid-Swerve-Rotation"}};
 

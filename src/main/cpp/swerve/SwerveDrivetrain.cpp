@@ -3,17 +3,39 @@
 
 SwerveDrivetrain::OdometryThread::OdometryThread(SwerveDrivetrain& swerveDrivetrain)
     : drivetrain{&swerveDrivetrain},
-      thread{},
-      threadMtx{},
       allSignals{{
           &drivetrain->modules[0]->drivePosition,
           &drivetrain->modules[0]->driveVelocity,
+          &drivetrain->modules[0]->driveAcceleration,
+          &drivetrain->modules[0]->driveMotorKT,
+          &drivetrain->modules[0]->driveMotorStallCurrent,
+          &drivetrain->modules[0]->driveMotorOutputCurrent,
+          &drivetrain->modules[0]->driveMotorOutputVoltage,
+
           &drivetrain->modules[1]->drivePosition,
           &drivetrain->modules[1]->driveVelocity,
+          &drivetrain->modules[1]->driveAcceleration,
+          &drivetrain->modules[1]->driveMotorKT,
+          &drivetrain->modules[1]->driveMotorStallCurrent,
+          &drivetrain->modules[1]->driveMotorOutputCurrent,
+          &drivetrain->modules[1]->driveMotorOutputVoltage,
+
           &drivetrain->modules[2]->drivePosition,
           &drivetrain->modules[2]->driveVelocity,
+          &drivetrain->modules[2]->driveAcceleration,
+          &drivetrain->modules[2]->driveMotorKT,
+          &drivetrain->modules[2]->driveMotorStallCurrent,
+          &drivetrain->modules[2]->driveMotorOutputCurrent,
+          &drivetrain->modules[2]->driveMotorOutputVoltage,
+
           &drivetrain->modules[3]->drivePosition,
           &drivetrain->modules[3]->driveVelocity,
+          &drivetrain->modules[3]->driveAcceleration,
+          &drivetrain->modules[3]->driveMotorKT,
+          &drivetrain->modules[3]->driveMotorStallCurrent,
+          &drivetrain->modules[3]->driveMotorOutputCurrent,
+          &drivetrain->modules[3]->driveMotorOutputVoltage,
+
           &drivetrain->pigeonW,
           &drivetrain->pigeonX,
           &drivetrain->pigeonY,
@@ -26,20 +48,22 @@ SwerveDrivetrain::OdometryThread::OdometryThread(SwerveDrivetrain& swerveDrivetr
 void SwerveDrivetrain::OdometryThread::Run() {
     frc::LinearFilter<units::second_t> loopFilter = frc::LinearFilter<units::second_t>::MovingAverage(50);
     const units::second_t nominalPeriod = 1.0 / drivetrain->updateFrequency;
-    units::second_t lastTimestamp = frc::Timer::GetFPGATimestamp();
+    units::second_t lastTimestamp = frc::Timer::GetTimestamp();
 
     while (isRunning.load()) {
         // Wait for all CTRE signals
+        std::this_thread::sleep_for(std::chrono::duration<double>(nominalPeriod()));
         if (!ctre::phoenix6::BaseStatusSignal::WaitForAll(nominalPeriod, allSignals).IsOK()) {
             failedDaqs++;
             continue;
         }
         successfulDaqs++;
 
-        // ---- LOCK ACQUIRED HERE ----
-        std::scoped_lock lock(drivetrain->stateLock);
+        std::unique_lock lock(drivetrain->stateLock);
 
-        const units::second_t now = frc::Timer::GetFPGATimestamp();
+        lock.lock();
+
+        const units::second_t now = frc::Timer::GetTimestamp();
         const units::second_t dt = now - lastTimestamp;
         lastTimestamp = now;
         averageLoopTime = units::second_t(loopFilter.Calculate(dt));
@@ -99,6 +123,8 @@ void SwerveDrivetrain::OdometryThread::Run() {
         if (drivetrain->telemetryFunction) {
             drivetrain->telemetryFunction(drivetrain->cachedState);
         }
+
+        lock.unlock();
     }
 }
 

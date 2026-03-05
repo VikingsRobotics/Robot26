@@ -69,7 +69,7 @@ static void ConfigureAzimuthFromConstants(rev::spark::SparkMax& motor, const Swe
 
     azimuthAbsEncoderConfig.Apply(AbsoluteEncoderConfig::Presets::REV_ThroughBoreEncoder());
     azimuthAbsEncoderConfig.PositionConversionFactor(1);
-    azimuthAbsEncoderConfig.VelocityConversionFactor(1 / 60);
+    azimuthAbsEncoderConfig.VelocityConversionFactor(1.0 / 60.0);
     azimuthAbsEncoderConfig.ZeroCentered(false);
     azimuthAbsEncoderConfig.Inverted(configs.EncoderInverted);
 
@@ -98,7 +98,7 @@ static void ConfigureAzimuthFromConstants(rev::spark::SparkMax& motor, const Swe
     azimuthSignalConfig.SetpointAlwaysOn(true).SetpointPeriodMs(20_ms());
 
     motor.Configure(azimuthConfig.Apply(azimuthAbsEncoderConfig).Apply(azimuthClosedLoopConfig).Apply(azimuthSignalConfig),
-                    rev::ResetMode::kResetSafeParameters, rev::PersistMode::kPersistParameters);
+                    rev::ResetMode::kNoResetSafeParameters, rev::PersistMode::kPersistParameters);
 }
 
 
@@ -111,8 +111,11 @@ SwerveModule::SwerveModule(const SwerveModuleConstants& constants, ctre::phoenix
       moduleOffset{constants.LocationX, constants.LocationY},
       drivePosition{driveMotor.GetPosition()},
       driveVelocity{driveMotor.GetVelocity()},
+      driveAcceleration{driveMotor.GetAcceleration()},
       driveMotorKT{driveMotor.GetMotorKT()},
       driveMotorStallCurrent{driveMotor.GetMotorStallCurrent()},
+      driveMotorOutputCurrent{driveMotor.GetTorqueCurrent()},
+      driveMotorOutputVoltage{driveMotor.GetMotorVoltage()},
       moduleSupplem{frc::LinearFilter<units::turns_per_second_t>::SinglePoleIIR(250, 20_ms)},
       kDriveRotationsPerMeter{(constants.DriveMotorGearRatio * 1_tr) / constants.WheelRadius},
       kDriveNmPerWheelN{constants.WheelRadius / constants.DriveMotorGearRatio},
@@ -122,7 +125,8 @@ SwerveModule::SwerveModule(const SwerveModuleConstants& constants, ctre::phoenix
     driveMotor.GetConfigurator().Apply(GetDriveConfigurationFromConfig(constants));
     ConfigureAzimuthFromConstants(steerMotor, constants);
 
-    ctre::phoenix6::BaseStatusSignal::SetUpdateFrequencyForAll(50_Hz, drivePosition, driveVelocity);
+    ctre::phoenix6::BaseStatusSignal::SetUpdateFrequencyForAll(50_Hz, drivePosition, driveVelocity, driveAcceleration, driveMotorKT, driveMotorStallCurrent,
+                                                               driveMotorOutputCurrent, driveMotorOutputVoltage);
 }
 
 void SwerveModule::Apply(ModuleRequest const& moduleRequest) {
@@ -167,6 +171,16 @@ void SwerveModule::Apply(ModuleRequest const& moduleRequest) {
             driveMotor.SetControl(ctre::phoenix6::controls::StaticBrake{});
             break;
     }
+
+    cachedState = CacheState{.drive = CacheState::Drive{.position = drivePosition.GetValue() * 1_m / 1_tr,
+                                                        .velocity = driveVelocity.GetValue() * 1_m / 1_tr,
+                                                        .acceleration = driveAcceleration.GetValue() * 1_m / 1_tr,
+                                                        .voltage = driveMotorOutputVoltage.GetValue(),
+                                                        .current = driveMotorOutputCurrent.GetValue()},
+                             .azimuth = CacheState::Azimuth{.position = units::turn_t{steerAbsoluteEncoder.GetPosition()},
+                                                            .velocity = units::turns_per_second_t{steerAbsoluteEncoder.GetVelocity()},
+                                                            .voltage = units::volt_t{steerMotor.GetBusVoltage() * steerMotor.GetAppliedOutput()},
+                                                            .current = units::ampere_t{steerMotor.GetOutputCurrent()}}};
 }
 
 frc::SwerveModulePosition SwerveModule::GetPosition(bool refresh) {
@@ -187,9 +201,9 @@ SwerveModule::MotorTorqueFeedforwards SwerveModule::CalculateMotorTorqueFeedforw
             feedforwardRotation.RotateBy(frc::Rotation2d{units::turn_t{steerAbsoluteEncoder.GetPosition()} + chassisAngularOffset});
 
         calculated.torque = distance * moduleFeedforwardRotation.Cos() * kDriveNmPerWheelN;
-        ctre::unit::newton_meters_per_ampere_t motorKT = driveMotorKT.Refresh(false).GetValue();
+        ctre::unit::newton_meters_per_ampere_t motorKT = driveMotorKT.GetValue();
         calculated.torqueCurrent = calculated.torque / motorKT;
-        calculated.voltage = (12_V / driveMotorStallCurrent.Refresh(false).GetValue()) * calculated.torqueCurrent;
+        calculated.voltage = (12_V / driveMotorStallCurrent.GetValue()) * calculated.torqueCurrent;
 
         return calculated;
     }

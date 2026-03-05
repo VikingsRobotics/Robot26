@@ -66,10 +66,11 @@ private:
 private:
     units::meters_per_second_t MaxSpeed;
 
-    /* What to publish over networktables for telemetry */
+
+    // What to publish over networktables for telemetry
     nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
 
-    /* Robot swerve drive state */
+    // Robot swerve drive state
     std::shared_ptr<nt::NetworkTable> driveStateTable = inst.GetTable("DriveState");
     nt::StructPublisher<frc::Pose3d> drivePose = driveStateTable->GetStructTopic<frc::Pose3d>("Pose").Publish();
     nt::StructPublisher<frc::ChassisSpeeds> driveSpeeds = driveStateTable->GetStructTopic<frc::ChassisSpeeds>("Speeds").Publish();
@@ -81,21 +82,23 @@ private:
     nt::DoublePublisher driveTimestamp = driveStateTable->GetDoubleTopic("Timestamp").Publish();
     nt::DoublePublisher driveOdometryFrequency = driveStateTable->GetDoubleTopic("OdometryFrequency").Publish();
 
-    /* Mechanisms to represent the swerve module states */
+    // Mechanisms to represent the swerve module states
     std::array<frc::Mechanism2d, 4> m_moduleMechanisms{
         frc::Mechanism2d{1, 1},
         frc::Mechanism2d{1, 1},
         frc::Mechanism2d{1, 1},
         frc::Mechanism2d{1, 1},
     };
-    /* A direction and length changing ligament for speed representation */
+
+    // A direction and length changing ligament for speed representation
     std::array<frc::MechanismLigament2d*, 4> m_moduleSpeeds{
         m_moduleMechanisms[0].GetRoot("RootSpeed", 0.5, 0.5)->Append<frc::MechanismLigament2d>("Speed", 0.5, 0_deg),
         m_moduleMechanisms[1].GetRoot("RootSpeed", 0.5, 0.5)->Append<frc::MechanismLigament2d>("Speed", 0.5, 0_deg),
         m_moduleMechanisms[2].GetRoot("RootSpeed", 0.5, 0.5)->Append<frc::MechanismLigament2d>("Speed", 0.5, 0_deg),
         m_moduleMechanisms[3].GetRoot("RootSpeed", 0.5, 0.5)->Append<frc::MechanismLigament2d>("Speed", 0.5, 0_deg),
     };
-    /* A direction changing and length constant ligament for module direction */
+
+    // A direction changing and length constant ligament for module direction
     std::array<frc::MechanismLigament2d*, 4> m_moduleDirections{
         m_moduleMechanisms[0]
             .GetRoot("RootDirection", 0.5, 0.5)

@@ -28,7 +28,7 @@ public:
         std::mutex threadMtx;
         std::atomic<bool> isRunning = false;
 
-        wpi::array<ctre::phoenix6::BaseStatusSignal*, 15> allSignals;
+        wpi::array<ctre::phoenix6::BaseStatusSignal*, 32> allSignals;
 
         units::second_t averageLoopTime;
         std::atomic<int32_t> successfulDaqs{};
@@ -519,7 +519,7 @@ public:
      * The index corresponds to the module described in the constructor.
      *
      * \param index Which module to get
-     * \returns Reference to SwerveModuleImpl
+     * \returns Reference to SwerveModule
      */
     SwerveModule& GetModule(size_t index) { return *modules[index]; }
 
@@ -527,9 +527,24 @@ public:
      * \brief Get a reference to the full array of modules.
      * The indexes correspond to the module described in the constructor.
      *
-     * \returns Reference to the SwerveModuleImpl array
+     * \returns Reference to the SwerveModule array
      */
     std::span<std::unique_ptr<SwerveModule>, 4> GetModules() { return modules; }
+
+    /**
+     * \brief Get a reference to the full array of modules state.
+     * The indexes correspond to the module described in the constructor.
+     *
+     * \returns Reference to the SwerveModule array
+     */
+    std::array<SwerveModule::CacheState, 4> GetModulesCachedStates() {
+        return {
+            modules[0]->GetCachedState(),
+            modules[1]->GetCachedState(),
+            modules[2]->GetCachedState(),
+            modules[3]->GetCachedState(),
+        };
+    }
 
     /**
      * \brief Gets the locations of the swerve modules.

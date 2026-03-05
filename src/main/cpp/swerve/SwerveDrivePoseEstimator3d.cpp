@@ -1,5 +1,7 @@
 #include "swerve/SwerveDrivePoseEstimator3d.hpp"
 
+#include <frc/Timer.h>
+
 
 SwerveDrivePoseEstimator3d::SwerveDrivePoseEstimator3d(SwerveDriveKinematics const& kinematics, frc::Rotation3d const& gyroAngle,
                                                        WheelPositions modulePositions, frc::Pose3d initialPose, std::array<double, 4> const& stateStdDevs,
@@ -158,7 +160,7 @@ void SwerveDrivePoseEstimator3d::AddVisionMeasurement(frc::Pose3d const& visionR
 }
 
 frc::Pose3d SwerveDrivePoseEstimator3d::Update(frc::Rotation3d const& gyroAngle, WheelPositions const& wheelPositions) {
-    return UpdateWithTime(wpi::math::MathSharedStore::GetTimestamp(), gyroAngle, wheelPositions);
+    return UpdateWithTime(frc::Timer::GetTimestamp(), gyroAngle, wheelPositions);
 }
 
 frc::Pose3d SwerveDrivePoseEstimator3d::UpdateWithTime(units::second_t currentTime, frc::Rotation3d const& gyroAngle, WheelPositions const& wheelPositions) {

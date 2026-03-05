@@ -16,11 +16,13 @@
 #include <frc2/command/Commands.h>
 
 #include "commands/SwerveJoystickAxisLimitedCommand.hpp"
+#include <frc/DataLogManager.h>
 
 RobotContainer::RobotContainer() : joystick{Swerve::TeleopOperator::kDriverControllerPort} {
     swerveSubsystem.SetDefaultCommand(SwerveJoystickAxisLimitedCommand{&swerveSubsystem, joystick});
 
     ConfigureBindings();
+    frc::DataLogManager::Stop();
 }
 
 void RobotContainer::ConfigureBindings() {

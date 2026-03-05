@@ -54,6 +54,8 @@ SwerveSubsystem::SwerveSubsystem()
     pathplanner::PathPlannerLogging::setLogActivePathCallback([this](std::vector<frc::Pose2d> poses) { m_field.GetObject("path")->SetPoses(poses); });
 
     frc::SmartDashboard::PutData(this);
+
+    RegisterTelemetry([this](SwerveDriveState const& state) { Telemeterize(state); });
 }
 
 static units::degree_t WrapAngle(units::degree_t angle) {
@@ -67,6 +69,7 @@ void SwerveSubsystem::Periodic() {
 }
 
 void SwerveSubsystem::Telemeterize(SwerveDriveState const& state) {
+    /*
     drivePose.Set(state.Pose);
     driveSpeeds.Set(state.Speeds);
     driveModuleStates.Set(state.ModuleStates);
@@ -89,4 +92,5 @@ void SwerveSubsystem::Telemeterize(SwerveDriveState const& state) {
     m_moduleDirections[3]->SetAngle(state.ModuleStates[3].angle.Degrees());
     m_moduleSpeeds[3]->SetAngle(state.ModuleStates[3].angle.Degrees());
     m_moduleSpeeds[3]->SetLength(state.ModuleStates[3].speed / (2 * MaxSpeed));
+    */
 }

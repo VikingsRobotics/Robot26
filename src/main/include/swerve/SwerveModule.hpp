@@ -220,9 +220,13 @@ private:
 
     ctre::phoenix6::StatusSignal<units::turn_t> drivePosition;
     ctre::phoenix6::StatusSignal<units::turns_per_second_t> driveVelocity;
+    ctre::phoenix6::StatusSignal<units::turns_per_second_squared_t> driveAcceleration;
 
     mutable ctre::phoenix6::StatusSignal<ctre::unit::newton_meters_per_ampere_t> driveMotorKT;
     mutable ctre::phoenix6::StatusSignal<units::ampere_t> driveMotorStallCurrent;
+
+    ctre::phoenix6::StatusSignal<units::ampere_t> driveMotorOutputCurrent;
+    ctre::phoenix6::StatusSignal<units::volt_t> driveMotorOutputVoltage;
 
     mutable frc::LinearFilter<units::turns_per_second_t> moduleSupplem;
 
@@ -235,6 +239,26 @@ private:
     units::meters_per_second_t kSpeedAt12Volts;
 
     frc::SwerveModuleState targetState;
+
+public:
+    struct CacheState {
+        struct Drive {
+            units::meter_t position;
+            units::meters_per_second_t velocity;
+            units::meters_per_second_squared_t acceleration;
+            units::volt_t voltage;
+            units::ampere_t current;
+        } drive;
+        struct Azimuth {
+            units::turn_t position;
+            units::turns_per_second_t velocity;
+            units::volt_t voltage;
+            units::ampere_t current;
+        } azimuth;
+    };
+
+private:
+    CacheState cachedState;
 
 public:
     /**
@@ -311,6 +335,15 @@ public:
      * \returns Target state of the module
      */
     frc::SwerveModuleState GetTargetState() const { return targetState; }
+
+    /**
+     * \brief Get the state of the module.
+     *
+     * This is typically used for telemetry.
+     *
+     * \returns State of the module
+     */
+    CacheState GetCachedState() const { return cachedState; }
 
     /**
      * \brief Resets this module's drive motor position to 0 rotations.
