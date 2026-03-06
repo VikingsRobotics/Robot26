@@ -41,9 +41,7 @@ SwerveDrivetrain::OdometryThread::OdometryThread(SwerveDrivetrain& swerveDrivetr
           &drivetrain->pigeonY,
           &drivetrain->pigeonZ,
       }},
-      averageLoopTime{1 / drivetrain->updateFrequency} {
-    ctre::phoenix6::BaseStatusSignal::SetUpdateFrequencyForAll(50_Hz, drivetrain->pigeonW, drivetrain->pigeonX, drivetrain->pigeonY, drivetrain->pigeonZ);
-}
+      averageLoopTime{1 / drivetrain->updateFrequency} {}
 
 void SwerveDrivetrain::OdometryThread::Run() {
     frc::LinearFilter<units::second_t> loopFilter = frc::LinearFilter<units::second_t>::MovingAverage(50);

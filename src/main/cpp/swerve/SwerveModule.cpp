@@ -124,9 +124,6 @@ SwerveModule::SwerveModule(const SwerveModuleConstants& constants, ctre::phoenix
       targetState{} {
     driveMotor.GetConfigurator().Apply(GetDriveConfigurationFromConfig(constants));
     ConfigureAzimuthFromConstants(steerMotor, constants);
-
-    ctre::phoenix6::BaseStatusSignal::SetUpdateFrequencyForAll(50_Hz, drivePosition, driveVelocity, driveAcceleration, driveMotorKT, driveMotorStallCurrent,
-                                                               driveMotorOutputCurrent, driveMotorOutputVoltage);
 }
 
 void SwerveModule::Apply(ModuleRequest const& moduleRequest) {
