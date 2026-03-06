@@ -17,7 +17,7 @@ SwerveJoystickAxisLimitedCommand::SwerveJoystickAxisLimitedCommand(SwerveSubsyst
       m_limiterY{Swerve::TeleopOperator::kTransLimiter},
       m_limiterA{Swerve::TeleopOperator::kAngleLimiter} {
     AddRequirements(m_subsystem);
-    SetName("Swerve Joystick Command");
+    SetName("Swerve Axis Joystick Command");
 }
 
 void SwerveJoystickAxisLimitedCommand::Initialize() {

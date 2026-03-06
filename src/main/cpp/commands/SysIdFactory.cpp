@@ -1,12 +1,12 @@
-#include "commands/SwerveSysIdFactory.hpp"
+#include "commands/SysIdFactory.hpp"
 #include "swerve/SwerveRequest.hpp"
 #include <memory>
 
-static constexpr frc2::sysid::Direction ConvertDirectionToFRC(SwerveSysIdFactory::Direction direction) {
-    return direction == SwerveSysIdFactory::Direction::kForward ? frc2::sysid::Direction::kForward : frc2::sysid::kReverse;
+static constexpr frc2::sysid::Direction ConvertDirectionToFRC(SysIdFactory::Direction direction) {
+    return direction == SysIdFactory::Direction::kForward ? frc2::sysid::Direction::kForward : frc2::sysid::kReverse;
 }
 
-frc2::CommandPtr SwerveSysIdFactory::Translation(SwerveSubsystem* subsystem, Direction direction, Type type, TranslationConfigs configs) {
+frc2::CommandPtr SysIdFactory::Translation(SwerveSubsystem* subsystem, Direction direction, Type type, TranslationConfigs configs) {
     frc2::sysid::SysIdRoutine routine{
         frc2::sysid::Config{configs.rampRate, configs.stepVoltage, configs.timeout, nullptr},
         frc2::sysid::Mechanism{[subsystem](units::volt_t volt) { subsystem->SetControl(SysIdSwerveTranslation{}.WithVolts(volt)); },
@@ -46,7 +46,7 @@ frc2::CommandPtr SwerveSysIdFactory::Translation(SwerveSubsystem* subsystem, Dir
     return routine.Quasistatic(ConvertDirectionToFRC(direction));
 }
 
-frc2::CommandPtr SwerveSysIdFactory::Steer(SwerveSubsystem* subsystem, Direction direction, Type type, SteerConfigs configs) {
+frc2::CommandPtr SysIdFactory::Steer(SwerveSubsystem* subsystem, Direction direction, Type type, SteerConfigs configs) {
     frc2::sysid::SysIdRoutine routine{
         frc2::sysid::Config{configs.rampRate, configs.stepVoltage, configs.timeout, nullptr},
         frc2::sysid::Mechanism{[subsystem](units::volt_t volt) { subsystem->SetControl(SysIdSwerveSteerGains{}.WithVolts(volt)); },
@@ -82,7 +82,7 @@ frc2::CommandPtr SwerveSysIdFactory::Steer(SwerveSubsystem* subsystem, Direction
     return routine.Quasistatic(ConvertDirectionToFRC(direction));
 }
 
-frc2::CommandPtr SwerveSysIdFactory::Rotation(SwerveSubsystem* subsystem, Direction direction, Type type, RotationConfigs configs) {
+frc2::CommandPtr SysIdFactory::Rotation(SwerveSubsystem* subsystem, Direction direction, Type type, RotationConfigs configs) {
     std::shared_ptr<std::atomic<units::volt_t>> outputRate = std::make_shared<std::atomic<units::volt_t>>(0_V);
 
     frc2::sysid::SysIdRoutine routine{frc2::sysid::Config{configs.rampRate * 1_V / 1_tr, configs.stepTurn * 1_V / 1_tr, configs.timeout, nullptr},

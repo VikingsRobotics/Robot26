@@ -16,6 +16,10 @@
 
 #include "subsystems/SwerveSubsystem.hpp"
 
+#include "commands/SwerveJoystickAxisLimitedCommand.hpp"
+#include "commands/SwerveJoystickPolarLimitedCommand.hpp"
+#include "commands/SwerveJoystickLookTowardsCommand.hpp"
+
 #include "commands/SwerveImportantCommand.hpp"
 
 class RobotContainer {
@@ -30,6 +34,10 @@ public:
     frc::SendableChooser<frc2::Command*> autoChooser{};
 
     frc2::CommandJoystick joystick;
+
+    SwerveJoystickAxisLimitedCommand axisSwerve{&swerveSubsystem, joystick};
+    SwerveJoystickPolarLimitedCommand polarSwerve{&swerveSubsystem, joystick};
+    SwerveJoystickLookTowardsCommand lookSwerve{&swerveSubsystem, joystick};
 
     SwerveImportantCommand importantCommand{&swerveSubsystem};
 };

@@ -13,7 +13,7 @@
 SwerveJoystickLookTowardsCommand::SwerveJoystickLookTowardsCommand(SwerveSubsystem* const subsystem, frc2::CommandJoystick& joystick)
     : m_subsystem{subsystem}, m_joystick{joystick.GetHID()} {
     AddRequirements(m_subsystem);
-    SetName("Swerve Joystick Command");
+    SetName("Swerve Look Towards Joystick Command");
 }
 
 void SwerveJoystickLookTowardsCommand::Initialize() {

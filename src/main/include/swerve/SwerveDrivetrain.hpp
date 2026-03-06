@@ -6,6 +6,8 @@
 #include "swerve/SwerveDrivePoseEstimator3d.hpp"
 #include "swerve/SwerveDrivetrainConstants.hpp"
 
+#include <fmt/core.h>
+
 #include <atomic>
 #include <span>
 #include <thread>
@@ -24,7 +26,7 @@ public:
     protected:
         SwerveDrivetrain* drivetrain;
 
-        std::thread thread;
+        std::jthread thread;
         std::mutex threadMtx;
         std::atomic<bool> isRunning = false;
 
@@ -45,7 +47,13 @@ public:
             std::lock_guard<std::mutex> lock{threadMtx};
             if (!thread.joinable()) {
                 isRunning.store(true, std::memory_order_relaxed);
-                thread = std::thread{[this] { Run(); }};
+                thread = std::jthread{[this] {
+                    try {
+                        Run();
+                    } catch (const std::exception& e) {
+                        fmt::print("Thread exception: {}\n", e.what());
+                    }
+                }};
             }
         }
 
@@ -151,7 +159,7 @@ private:
 
     mutable std::recursive_mutex stateLock{};
     SwerveDriveState cachedState{};
-    std::function<void(SwerveDriveState const&)> telemetryFunction{};
+    std::function<void(SwerveDriveState const&)> telemetryFunction = [](SwerveDriveState const&) {};
 
     units::hertz_t updateFrequency;
 
@@ -213,23 +221,23 @@ public:
      * at least as long as the drivetrain. This can be done by storing the
      * request as a member variable of your drivetrain subsystem or robot.
      *
-     * \param request Request to apply
+     * \param newRequest Request to apply
      */
     template <std::derived_from<SwerveRequest> Request>
         requires(!std::is_const_v<Request>)
-    void SetControl(Request& request) {
-        SetControl([&request](auto const& params, auto modules) mutable { return request.Apply(params, modules); });
+    void SetControl(Request& newRequest) {
+        SetControl([request = newRequest](auto const& params, auto modules) mutable { return request.Apply(params, modules); });
     }
 
     /**
      * \brief Applies the specified control request to this swerve drivetrain.
      *
-     * \param request Request to apply
+     * \param newRequest Request to apply
      */
     template <std::derived_from<SwerveRequest> Request>
         requires(!std::is_const_v<Request>)
-    void SetControl(Request&& request) {
-        SetControl([request = std::move(request)](auto const& params, auto modules) mutable { return request.Apply(params, modules); });
+    void SetControl(Request&& newRequest) {
+        SetControl([request = std::move(newRequest)](auto const& params, auto modules) mutable { return request.Apply(params, modules); });
     }
 
     /**
@@ -283,11 +291,11 @@ public:
      * This can also be used for logging data if the function performs logging instead of telemetry.
      * Additionally, the SwerveDriveState object can be cloned and stored for later processing.
      *
-     * \param telemetryFunction Function to call for telemetry or logging
+     * \param func Function to call for telemetry or logging
      */
-    void RegisterTelemetry(std::function<void(SwerveDriveState const&)> telemetryFunction) {
+    void RegisterTelemetry(std::function<void(SwerveDriveState const&)> func) {
         std::lock_guard<std::recursive_mutex> lock{stateLock};
-        telemetryFunction = std::move(telemetryFunction);
+        telemetryFunction = std::move(func);
     }
 
     /**
@@ -457,7 +465,7 @@ public:
      *                                 as your time source in this case.
      * \param visionMeasurementStdDevs Standard deviations of the vision pose
      *                                 measurement (x position in meters, y position
-     *                                 in meters, and heading in radians). Increase
+     *                                 in meters, z position in meters, and heading in radians). Increase
      *                                 these numbers to trust the vision pose
      *                                 measurement less.
      */

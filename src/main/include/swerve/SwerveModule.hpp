@@ -324,7 +324,7 @@ public:
      * \returns Current state of the module
      */
     frc::SwerveModuleState GetCurrentState() const {
-        return frc::SwerveModuleState{driveVelocity.GetValue() / kDriveRotationsPerMeter, units::turn_t{steerAbsoluteEncoder.GetPosition()}};
+        return frc::SwerveModuleState{driveVelocity.GetValue() * 1_m / 1_tr, units::turn_t{steerAbsoluteEncoder.GetPosition()}};
     }
 
     /**

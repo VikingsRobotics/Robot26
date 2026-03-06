@@ -4,7 +4,7 @@
 
 #include <cstdint>
 #include <frc/geometry/Transform3d.h>
-#include <frc/kinematics/struct/SwerveModulePositionStruct.h>
+#include <frc/geometry/struct/Transform3dStruct.h>
 #include <units/time.h>
 #include <wpi/struct/Struct.h>
 

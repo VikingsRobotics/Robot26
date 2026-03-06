@@ -116,7 +116,7 @@ SwerveModule::SwerveModule(const SwerveModuleConstants& constants, ctre::phoenix
       driveMotorStallCurrent{driveMotor.GetMotorStallCurrent()},
       driveMotorOutputCurrent{driveMotor.GetTorqueCurrent()},
       driveMotorOutputVoltage{driveMotor.GetMotorVoltage()},
-      moduleSupplem{frc::LinearFilter<units::turns_per_second_t>::SinglePoleIIR(250, 20_ms)},
+      moduleSupplem{frc::LinearFilter<units::turns_per_second_t>::SinglePoleIIR(0.25, 20_ms)},
       kDriveRotationsPerMeter{(constants.DriveMotorGearRatio * 1_tr) / constants.WheelRadius},
       kDriveNmPerWheelN{constants.WheelRadius / constants.DriveMotorGearRatio},
       kCouplingRatioDriveRotorToEncoder{constants.CouplingGearRatio},

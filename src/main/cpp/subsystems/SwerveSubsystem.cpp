@@ -24,7 +24,7 @@
 
 SwerveSubsystem::SwerveSubsystem()
     : SubsystemBase{"Swerve Subsystem"},
-      SwerveDrivetrain{Swerve::DeviceProperties::kDrivetrain, 100_Hz, std::array<double, 4>{0.9, 0.9, 0.9, 0.9}, std::array<double, 4>{0.1, 0.1, 0.1, 0.1},
+      SwerveDrivetrain{Swerve::DeviceProperties::kDrivetrain, 50_Hz, std::array<double, 4>{0.9, 0.9, 0.9, 0.9}, std::array<double, 4>{0.1, 0.1, 0.1, 0.1},
                        std::array<SwerveModuleConstants, 4>{Swerve::DeviceProperties::kFrontLeft, Swerve::DeviceProperties::kFrontRight,
                                                             Swerve::DeviceProperties::kBackLeft, Swerve::DeviceProperties::kBackRight}},
       MaxSpeed{Swerve::Mechanism::kMaxMovement} {
@@ -53,8 +53,6 @@ SwerveSubsystem::SwerveSubsystem()
 
     pathplanner::PathPlannerLogging::setLogActivePathCallback([this](std::vector<frc::Pose2d> poses) { m_field.GetObject("path")->SetPoses(poses); });
 
-    frc::SmartDashboard::PutData(this);
-
     RegisterTelemetry([this](SwerveDriveState const& state) { Telemeterize(state); });
 }
 
@@ -69,7 +67,6 @@ void SwerveSubsystem::Periodic() {
 }
 
 void SwerveSubsystem::Telemeterize(SwerveDriveState const& state) {
-    /*
     drivePose.Set(state.Pose);
     driveSpeeds.Set(state.Speeds);
     driveModuleStates.Set(state.ModuleStates);
@@ -92,5 +89,4 @@ void SwerveSubsystem::Telemeterize(SwerveDriveState const& state) {
     m_moduleDirections[3]->SetAngle(state.ModuleStates[3].angle.Degrees());
     m_moduleSpeeds[3]->SetAngle(state.ModuleStates[3].angle.Degrees());
     m_moduleSpeeds[3]->SetLength(state.ModuleStates[3].speed / (2 * MaxSpeed));
-    */
 }

@@ -11,7 +11,7 @@
 #include "subsystems/SwerveSubsystem.hpp"
 
 
-class SwerveSysIdFactory {
+class SysIdFactory {
 public:
     enum class Direction { kForward, kReverse };
     enum class Type { kDynamic, kQuasistatic };

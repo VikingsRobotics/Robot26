@@ -116,6 +116,9 @@
     "xtree": "cpp",
     "stack": "cpp",
     "qr": "cpp",
-    "core": "cpp"
+    "core": "cpp",
+    "*.inc": "cpp",
+    "matrixfunctions": "cpp",
+    "*.mac": "cpp"
   }
 }

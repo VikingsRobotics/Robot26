@@ -52,16 +52,18 @@ void SwerveDrivetrain::OdometryThread::Run() {
 
     while (isRunning.load()) {
         // Wait for all CTRE signals
+        if (!ctre::phoenix6::BaseStatusSignal::WaitForAll(0_s, allSignals).IsOK()) {
+            failedDaqs++;
+            continue;
+        }
         std::this_thread::sleep_for(std::chrono::duration<double>(nominalPeriod()));
-        if (!ctre::phoenix6::BaseStatusSignal::WaitForAll(nominalPeriod, allSignals).IsOK()) {
+        if (!ctre::phoenix6::BaseStatusSignal::IsAllGood(allSignals)) {
             failedDaqs++;
             continue;
         }
         successfulDaqs++;
 
-        std::unique_lock lock(drivetrain->stateLock);
-
-        lock.lock();
+        std::lock_guard lock(drivetrain->stateLock);
 
         const units::second_t now = frc::Timer::GetTimestamp();
         const units::second_t dt = now - lastTimestamp;
@@ -91,7 +93,11 @@ void SwerveDrivetrain::OdometryThread::Run() {
         drivetrain->requestParameters.updatePeriod = averageLoopTime;
 
         if (drivetrain->requestToApply) {
-            drivetrain->requestToApply(drivetrain->requestParameters, drivetrain->GetModules());
+            try {
+                drivetrain->requestToApply(drivetrain->requestParameters, drivetrain->GetModules());
+            } catch (const std::exception& e) {
+                fmt::print("Drive request error: {}\n", e.what());
+            }
         }
 
         wpi::array<frc::SwerveModuleState, 4> targetStates{wpi::empty_array};
@@ -121,10 +127,12 @@ void SwerveDrivetrain::OdometryThread::Run() {
         drivetrain->cachedState.FailedDaqs = failedDaqs.load();
 
         if (drivetrain->telemetryFunction) {
-            drivetrain->telemetryFunction(drivetrain->cachedState);
+            try {
+                drivetrain->telemetryFunction(drivetrain->cachedState);
+            } catch (const std::exception& e) {
+                fmt::print("Telemetry error: {}\n", e.what());
+            }
         }
-
-        lock.unlock();
     }
 }
 
@@ -156,5 +164,8 @@ SwerveDrivetrain::SwerveDrivetrain(SwerveDrivetrainConstants const& drivetrainCo
                visionStandardDeviation},
       updateFrequency{odometryUpdateFrequency},
       odometryThread{std::make_unique<OdometryThread>(*this)} {
+    if (drivetrainConstants.Pigeon2Configs) {
+        pigeon2.GetConfigurator().Apply(*drivetrainConstants.Pigeon2Configs);
+    }
     odometryThread->Start();
 }

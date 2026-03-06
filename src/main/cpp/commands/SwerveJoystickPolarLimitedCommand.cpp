@@ -17,7 +17,7 @@ SwerveJoystickPolarLimitedCommand::SwerveJoystickPolarLimitedCommand(SwerveSubsy
       m_limiterDir{Swerve::TeleopOperator::kDirLimiter},
       m_limiterA{Swerve::TeleopOperator::kAngleLimiter} {
     AddRequirements(m_subsystem);
-    SetName("Swerve Joystick Command");
+    SetName("Swerve Polar Joystick Command");
 }
 
 void SwerveJoystickPolarLimitedCommand::Initialize() {

@@ -222,13 +222,13 @@ constexpr pathplanner::PIDConstants kRotationalPID{1.0, 0.0, 0.0};
 constexpr units::meters_per_second_t kMaxSpeed = 5.0_mps;
 // Max acceleration that Pathplanner can use on the robot (limited by physical
 // design)
-constexpr units::meters_per_second_squared_t kMaxAcceleration = 3.0_mps_sq;
+constexpr units::meters_per_second_squared_t kMaxAcceleration = 5.0_mps_sq;
 // Max angular speed that PathplannerLib can use on the robot (limited by
 // physical design)
-constexpr units::radians_per_second_t kMaxAngularSpeed = 3.0_rad_per_s;
+constexpr units::radians_per_second_t kMaxAngularSpeed = 3.9_tps;
 // Max angular acceleration that PathplannerLib can use on the robot (limited by
 // physical design)
-constexpr units::radians_per_second_squared_t kMaxAngularAcceleration = 5.0_rad_per_s_sq;
+constexpr units::radians_per_second_squared_t kMaxAngularAcceleration = 3.9_tr_per_s_sq;
 }  // namespace Auto
 
 }  // namespace Swerve

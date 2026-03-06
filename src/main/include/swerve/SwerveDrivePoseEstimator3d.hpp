@@ -54,10 +54,10 @@ public:
      *     the swerve modules.
      * \param initialPose The starting pose estimate.
      * \param stateStdDevs Standard deviations of the pose estimate (x position in
-     *     meters, y position in meters, and heading in radians). Increase these
+     *     meters, y position in meters, z position in meters, and heading in radians). Increase these
      *     numbers to trust your state estimate less.
      * \param visionMeasurementStdDevs Standard deviations of the vision pose
-     *     measurement (x position in meters, y position in meters, and heading in
+     *     measurement (x position in meters, y position in meters, z position in meters, and heading in
      *     radians). Increase these numbers to trust the vision pose measurement
      *     less.
      */
@@ -69,7 +69,7 @@ public:
      * to change trust in odometry after an impact with the wall or traversing a bump.
      *
      * \param stateStdDevs Standard deviations of the pose estimate (x position in
-     *     meters, y position in meters, and heading in radians). Increase these
+     *     meters, y position in meters, z position in meters, and heading in radians). Increase these
      *     numbers to trust your state estimate less.
      */
     void SetStateStdDevs(std::array<double, 4> const& stateStdDevs);
@@ -80,7 +80,7 @@ public:
      * change trust as distance to a vision target increases.
      *
      * \param visionMeasurementStdDevs Standard deviations of the vision pose
-     *     measurement (x position in meters, y position in meters, and heading in
+     *     measurement (x position in meters, y position in meters, z position in meters, and heading in
      *     radians). Increase these numbers to trust the vision pose measurement
      *     less.
      */
@@ -181,7 +181,7 @@ public:
      *     This means that you should use utils#GetCurrentTime() as your time source
      *     in this case.
      * \param visionMeasurementStdDevs Standard deviations of the vision pose
-     *     measurement (x position in meters, y position in meters, and heading in
+     *     measurement (x position in meters, y position in meters, z position in meters, and heading in
      *     radians). Increase these numbers to trust the vision pose measurement
      *     less.
      */
