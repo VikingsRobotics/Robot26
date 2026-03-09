@@ -1,139 +1,6 @@
 #include "swerve/SwerveDrivetrain.hpp"
 #include <frc/Timer.h>
 
-SwerveDrivetrain::OdometryThread::OdometryThread(SwerveDrivetrain& swerveDrivetrain)
-    : drivetrain{&swerveDrivetrain},
-      allSignals{{
-          &drivetrain->modules[0]->drivePosition,
-          &drivetrain->modules[0]->driveVelocity,
-          &drivetrain->modules[0]->driveAcceleration,
-          &drivetrain->modules[0]->driveMotorKT,
-          &drivetrain->modules[0]->driveMotorStallCurrent,
-          &drivetrain->modules[0]->driveMotorOutputCurrent,
-          &drivetrain->modules[0]->driveMotorOutputVoltage,
-
-          &drivetrain->modules[1]->drivePosition,
-          &drivetrain->modules[1]->driveVelocity,
-          &drivetrain->modules[1]->driveAcceleration,
-          &drivetrain->modules[1]->driveMotorKT,
-          &drivetrain->modules[1]->driveMotorStallCurrent,
-          &drivetrain->modules[1]->driveMotorOutputCurrent,
-          &drivetrain->modules[1]->driveMotorOutputVoltage,
-
-          &drivetrain->modules[2]->drivePosition,
-          &drivetrain->modules[2]->driveVelocity,
-          &drivetrain->modules[2]->driveAcceleration,
-          &drivetrain->modules[2]->driveMotorKT,
-          &drivetrain->modules[2]->driveMotorStallCurrent,
-          &drivetrain->modules[2]->driveMotorOutputCurrent,
-          &drivetrain->modules[2]->driveMotorOutputVoltage,
-
-          &drivetrain->modules[3]->drivePosition,
-          &drivetrain->modules[3]->driveVelocity,
-          &drivetrain->modules[3]->driveAcceleration,
-          &drivetrain->modules[3]->driveMotorKT,
-          &drivetrain->modules[3]->driveMotorStallCurrent,
-          &drivetrain->modules[3]->driveMotorOutputCurrent,
-          &drivetrain->modules[3]->driveMotorOutputVoltage,
-
-          &drivetrain->pigeonW,
-          &drivetrain->pigeonX,
-          &drivetrain->pigeonY,
-          &drivetrain->pigeonZ,
-      }},
-      averageLoopTime{1 / drivetrain->updateFrequency} {}
-
-void SwerveDrivetrain::OdometryThread::Run() {
-    frc::LinearFilter<units::second_t> loopFilter = frc::LinearFilter<units::second_t>::MovingAverage(50);
-    const units::second_t nominalPeriod = 1.0 / drivetrain->updateFrequency;
-    units::second_t lastTimestamp = frc::Timer::GetTimestamp();
-
-    while (isRunning.load()) {
-        // Wait for all CTRE signals
-        if (!ctre::phoenix6::BaseStatusSignal::WaitForAll(0_s, allSignals).IsOK()) {
-            failedDaqs++;
-            continue;
-        }
-        std::this_thread::sleep_for(std::chrono::duration<double>(nominalPeriod()));
-        if (!ctre::phoenix6::BaseStatusSignal::IsAllGood(allSignals)) {
-            failedDaqs++;
-            continue;
-        }
-        successfulDaqs++;
-
-        std::lock_guard lock(drivetrain->stateLock);
-
-        const units::second_t now = frc::Timer::GetTimestamp();
-        const units::second_t dt = now - lastTimestamp;
-        lastTimestamp = now;
-        averageLoopTime = units::second_t(loopFilter.Calculate(dt));
-
-        frc::Quaternion currentOrientation{drivetrain->pigeonW.GetValue()(), drivetrain->pigeonX.GetValue()(), drivetrain->pigeonY.GetValue()(),
-                                           drivetrain->pigeonZ.GetValue()()};
-
-        frc::Rotation3d heading{currentOrientation};
-
-        frc::Pose3d odomPose = drivetrain->odometry.Update(heading, drivetrain->modulePositions);
-        frc::ChassisSpeeds speeds = drivetrain->kinematics.ToChassisSpeeds(drivetrain->moduleStates);
-
-        drivetrain->requestParameters.kinematics = &drivetrain->kinematics;
-        drivetrain->requestParameters.moduleLocations = drivetrain->moduleLocations;
-        drivetrain->requestParameters.kMaxSpeed = std::min({
-            drivetrain->modules[0]->kSpeedAt12Volts,
-            drivetrain->modules[1]->kSpeedAt12Volts,
-            drivetrain->modules[2]->kSpeedAt12Volts,
-            drivetrain->modules[3]->kSpeedAt12Volts,
-        });
-        drivetrain->requestParameters.operatorForwardDirection = drivetrain->operatorForwardDirection;
-        drivetrain->requestParameters.currentChassisSpeed = speeds;
-        drivetrain->requestParameters.currentPose = odomPose;
-        drivetrain->requestParameters.timestamp = units::second_t(now);
-        drivetrain->requestParameters.updatePeriod = averageLoopTime;
-
-        if (drivetrain->requestToApply) {
-            try {
-                drivetrain->requestToApply(drivetrain->requestParameters, drivetrain->GetModules());
-            } catch (const std::exception& e) {
-                fmt::print("Drive request error: {}\n", e.what());
-            }
-        }
-
-        wpi::array<frc::SwerveModuleState, 4> targetStates{wpi::empty_array};
-        drivetrain->modulePositions[0] = drivetrain->modules[0]->GetPosition(false);
-        drivetrain->moduleStates[0] = drivetrain->modules[0]->GetCurrentState();
-        targetStates[0] = drivetrain->modules[0]->GetTargetState();
-        drivetrain->modulePositions[1] = drivetrain->modules[1]->GetPosition(false);
-        drivetrain->moduleStates[1] = drivetrain->modules[1]->GetCurrentState();
-        targetStates[1] = drivetrain->modules[1]->GetTargetState();
-        drivetrain->modulePositions[2] = drivetrain->modules[2]->GetPosition(false);
-        drivetrain->moduleStates[2] = drivetrain->modules[2]->GetCurrentState();
-        targetStates[2] = drivetrain->modules[2]->GetTargetState();
-        drivetrain->modulePositions[3] = drivetrain->modules[3]->GetPosition(false);
-        drivetrain->moduleStates[3] = drivetrain->modules[3]->GetCurrentState();
-        targetStates[3] = drivetrain->modules[3]->GetTargetState();
-
-
-        drivetrain->cachedState.Pose = odomPose;
-        drivetrain->cachedState.Speeds = speeds;
-        drivetrain->cachedState.ModuleStates = drivetrain->moduleStates;
-        drivetrain->cachedState.ModuleTargets = targetStates;
-        drivetrain->cachedState.ModulePositions = drivetrain->modulePositions;
-        drivetrain->cachedState.RawOrientation = heading;
-        drivetrain->cachedState.Timestamp = now;
-        drivetrain->cachedState.OdometryPeriod = averageLoopTime;
-        drivetrain->cachedState.SuccessfulDaqs = successfulDaqs.load();
-        drivetrain->cachedState.FailedDaqs = failedDaqs.load();
-
-        if (drivetrain->telemetryFunction) {
-            try {
-                drivetrain->telemetryFunction(drivetrain->cachedState);
-            } catch (const std::exception& e) {
-                fmt::print("Telemetry error: {}\n", e.what());
-            }
-        }
-    }
-}
-
 SwerveDrivetrain::SwerveDrivetrain(SwerveDrivetrainConstants const& drivetrainConstants, units::hertz_t odometryUpdateFrequency,
                                    std::array<double, 4> const& odometryStandardDeviation, std::array<double, 4> const& visionStandardDeviation,
                                    std::span<SwerveModuleConstants const, 4> swerveModules)
@@ -161,9 +28,135 @@ SwerveDrivetrain::SwerveDrivetrain(SwerveDrivetrainConstants const& drivetrainCo
                odometryStandardDeviation,
                visionStandardDeviation},
       updateFrequency{odometryUpdateFrequency},
-      odometryThread{std::make_unique<OdometryThread>(*this)} {
+      odometryThread{[this]() {
+          static frc::LinearFilter<units::second_t> loopFilter = frc::LinearFilter<units::second_t>::MovingAverage(50);
+          static units::second_t lastTimestamp = frc::Timer::GetTimestamp();
+          static wpi::array<ctre::phoenix6::BaseStatusSignal*, 32> allSignals{
+              &modules[0]->drivePosition,
+              &modules[0]->driveVelocity,
+              &modules[0]->driveAcceleration,
+              &modules[0]->driveMotorKT,
+              &modules[0]->driveMotorStallCurrent,
+              &modules[0]->driveMotorOutputCurrent,
+              &modules[0]->driveMotorOutputVoltage,
+
+              &modules[1]->drivePosition,
+              &modules[1]->driveVelocity,
+              &modules[1]->driveAcceleration,
+              &modules[1]->driveMotorKT,
+              &modules[1]->driveMotorStallCurrent,
+              &modules[1]->driveMotorOutputCurrent,
+              &modules[1]->driveMotorOutputVoltage,
+
+              &modules[2]->drivePosition,
+              &modules[2]->driveVelocity,
+              &modules[2]->driveAcceleration,
+              &modules[2]->driveMotorKT,
+              &modules[2]->driveMotorStallCurrent,
+              &modules[2]->driveMotorOutputCurrent,
+              &modules[2]->driveMotorOutputVoltage,
+
+              &modules[3]->drivePosition,
+              &modules[3]->driveVelocity,
+              &modules[3]->driveAcceleration,
+              &modules[3]->driveMotorKT,
+              &modules[3]->driveMotorStallCurrent,
+              &modules[3]->driveMotorOutputCurrent,
+              &modules[3]->driveMotorOutputVoltage,
+
+              &pigeonW,
+              &pigeonX,
+              &pigeonY,
+              &pigeonZ,
+          };
+          static int32_t failedDaqs = 0;
+          static int32_t successfulDaqs = 0;
+
+
+          if (!ctre::phoenix6::BaseStatusSignal::WaitForAll(0_s, allSignals).IsOK()) {
+              failedDaqs++;
+              return;
+          }
+          if (!ctre::phoenix6::BaseStatusSignal::IsAllGood(allSignals)) {
+              failedDaqs++;
+              return;
+          }
+          successfulDaqs++;
+
+          std::lock_guard lock(stateLock);
+
+          const units::second_t now = frc::Timer::GetTimestamp();
+          const units::second_t dt = now - lastTimestamp;
+          lastTimestamp = now;
+          units::second_t averageLoopTime = loopFilter.Calculate(dt);
+
+          frc::Quaternion currentOrientation{pigeonW.GetValue()(), pigeonX.GetValue()(), pigeonY.GetValue()(), pigeonZ.GetValue()()};
+
+          frc::Rotation3d heading{currentOrientation};
+
+          frc::Pose3d odomPose = odometry.Update(heading, modulePositions);
+          frc::ChassisSpeeds speeds = kinematics.ToChassisSpeeds(moduleStates);
+
+          requestParameters.kinematics = &kinematics;
+          requestParameters.moduleLocations = moduleLocations;
+          requestParameters.kMaxSpeed = std::min({
+              modules[0]->kSpeedAt12Volts,
+              modules[1]->kSpeedAt12Volts,
+              modules[2]->kSpeedAt12Volts,
+              modules[3]->kSpeedAt12Volts,
+          });
+          requestParameters.operatorForwardDirection = operatorForwardDirection;
+          requestParameters.currentChassisSpeed = speeds;
+          requestParameters.currentPose = odomPose;
+          requestParameters.timestamp = units::second_t(now);
+          requestParameters.updatePeriod = averageLoopTime;
+
+          if (requestToApply) {
+              try {
+                  requestToApply(requestParameters, GetModules());
+              } catch (const std::exception& e) {
+                  fmt::print("Drive request error: {}\n", e.what());
+              }
+          }
+
+          wpi::array<frc::SwerveModuleState, 4> targetStates{wpi::empty_array};
+          modulePositions[0] = modules[0]->GetPosition(false);
+          moduleStates[0] = modules[0]->GetCurrentState();
+          targetStates[0] = modules[0]->GetTargetState();
+          modulePositions[1] = modules[1]->GetPosition(false);
+          moduleStates[1] = modules[1]->GetCurrentState();
+          targetStates[1] = modules[1]->GetTargetState();
+          modulePositions[2] = modules[2]->GetPosition(false);
+          moduleStates[2] = modules[2]->GetCurrentState();
+          targetStates[2] = modules[2]->GetTargetState();
+          modulePositions[3] = modules[3]->GetPosition(false);
+          moduleStates[3] = modules[3]->GetCurrentState();
+          targetStates[3] = modules[3]->GetTargetState();
+
+
+          cachedState.Pose = odomPose;
+          cachedState.Speeds = speeds;
+          cachedState.ModuleStates = moduleStates;
+          cachedState.ModuleTargets = targetStates;
+          cachedState.ModulePositions = modulePositions;
+          cachedState.RawOrientation = heading;
+          cachedState.Timestamp = now;
+          cachedState.OdometryPeriod = averageLoopTime;
+          cachedState.SuccessfulDaqs = successfulDaqs;
+          cachedState.FailedDaqs = failedDaqs;
+
+          if (telemetryFunction) {
+              try {
+                  telemetryFunction(cachedState);
+              } catch (const std::exception& e) {
+                  fmt::print("Telemetry error: {}\n", e.what());
+              }
+          }
+      }} {
     if (drivetrainConstants.Pigeon2Configs) {
         pigeon2.GetConfigurator().Apply(*drivetrainConstants.Pigeon2Configs);
     }
-    odometryThread->Start();
+    odometryThread.SetHALThreadPriority(true, 70);
+    odometryThread.StartPeriodic(updateFrequency);
+    odometryThread.SetName("Swerve Odometry Thread");
 }

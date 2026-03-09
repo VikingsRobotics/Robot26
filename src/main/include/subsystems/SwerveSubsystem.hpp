@@ -38,11 +38,9 @@ public:
     using SwerveDrivetrain::GetModuleLocations;
     using SwerveDrivetrain::GetModules;
     using SwerveDrivetrain::GetOdometryFrequency;
-    using SwerveDrivetrain::GetOdometryThread;
     using SwerveDrivetrain::GetOperatorForwardDirection;
     using SwerveDrivetrain::GetPigeon2;
     using SwerveDrivetrain::GetState;
-    using SwerveDrivetrain::IsOdometryValid;
     using SwerveDrivetrain::RegisterTelemetry;
     using SwerveDrivetrain::ResetPose;
     using SwerveDrivetrain::ResetRotation;

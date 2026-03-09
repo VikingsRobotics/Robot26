@@ -7,6 +7,7 @@
 #include "swerve/SwerveDrivetrainConstants.hpp"
 
 #include <fmt/core.h>
+#include <frc/Notifier.h>
 
 #include <atomic>
 #include <span>
@@ -21,64 +22,6 @@ class SwerveRequest;
  */
 class SwerveDrivetrain {
 public:
-    /** \brief Performs swerve module updates in a separate thread to minimize latency. */
-    class OdometryThread {
-    protected:
-        SwerveDrivetrain* drivetrain;
-
-        std::jthread thread;
-        std::mutex threadMtx;
-        std::atomic<bool> isRunning = false;
-
-        wpi::array<ctre::phoenix6::BaseStatusSignal*, 32> allSignals;
-
-        units::second_t averageLoopTime;
-        std::atomic<int32_t> successfulDaqs{};
-        std::atomic<int32_t> failedDaqs{};
-
-    public:
-        OdometryThread(SwerveDrivetrain& swerveDrivetrain);
-        ~OdometryThread() { Stop(); }
-
-        /**
-         * \brief Starts the odometry thread.
-         */
-        void Start() {
-            std::lock_guard<std::mutex> lock{threadMtx};
-            if (!thread.joinable()) {
-                isRunning.store(true, std::memory_order_relaxed);
-                thread = std::jthread{[this] {
-                    try {
-                        Run();
-                    } catch (const std::exception& e) {
-                        fmt::print("Thread exception: {}\n", e.what());
-                    }
-                }};
-            }
-        }
-
-        /**
-         * \brief Stops the odometry thread.
-         */
-        void Stop() {
-            std::lock_guard<std::mutex> lock{threadMtx};
-            if (thread.joinable()) {
-                isRunning.store(false, std::memory_order_relaxed);
-                thread.join();
-            }
-        }
-
-        /**
-         * \brief Check if the odometry is currently valid.
-         *
-         * \returns True if odometry is valid
-         */
-        bool IsOdometryValid() const { return successfulDaqs.load(std::memory_order_relaxed) > 5; }
-
-    protected:
-        void Run();
-    };
-
     /**
      * \brief Plain-Old-Data class holding the state of the swerve drivetrain.
      * This encapsulates most data that is relevant for telemetry or
@@ -163,7 +106,7 @@ private:
 
     units::hertz_t updateFrequency;
 
-    std::unique_ptr<OdometryThread> odometryThread;
+    frc::Notifier odometryThread;
 
 public:
     /**
@@ -192,20 +135,6 @@ public:
      * \returns Target odometry update frequency
      */
     units::hertz_t GetOdometryFrequency() const { return updateFrequency; }
-
-    /**
-     * \brief Gets a reference to the odometry thread.
-     *
-     * \returns Odometry thread
-     */
-    OdometryThread& GetOdometryThread() { return *odometryThread; }
-
-    /**
-     * \brief Check if the odometry is currently valid.
-     *
-     * \returns True if odometry is valid
-     */
-    bool IsOdometryValid() const { return odometryThread->IsOdometryValid(); }
 
     /**
      * \brief Gets a reference to the kinematics used for the drivetrain.
