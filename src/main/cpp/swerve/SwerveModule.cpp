@@ -124,6 +124,7 @@ SwerveModule::SwerveModule(const SwerveModuleConstants& constants, ctre::phoenix
       targetState{} {
     driveMotor.GetConfigurator().Apply(GetDriveConfigurationFromConfig(constants));
     ConfigureAzimuthFromConstants(steerMotor, constants);
+    UpdateModuleSupplem();
 }
 
 void SwerveModule::Apply(ModuleRequest const& moduleRequest) {
@@ -210,11 +211,12 @@ SwerveModule::MotorTorqueFeedforwards SwerveModule::CalculateMotorTorqueFeedforw
 units::turns_per_second_t SwerveModule::ApplyVelocityCorrections(units::turns_per_second_t velocity, units::turn_t angleDifference) const {
     double cosineScale = units::math::cos(angleDifference)();
 
-    units::turns_per_second_t steerSpeed{steerAbsoluteEncoder.GetVelocity()};
-
-    units::turns_per_second_t filteredSpeed = moduleSupplem.Calculate(steerSpeed);
-
-    velocity = (velocity * cosineScale) - (filteredSpeed * kCouplingRatioDriveRotorToEncoder);
+    velocity = (velocity * cosineScale) - (moduleSupplemSpeed * kCouplingRatioDriveRotorToEncoder);
 
     return velocity;
+}
+
+void SwerveModule::UpdateModuleSupplem() {
+    units::turns_per_second_t steerSpeed{steerAbsoluteEncoder.GetVelocity()};
+    moduleSupplemSpeed = moduleSupplem.Calculate(steerSpeed);
 }

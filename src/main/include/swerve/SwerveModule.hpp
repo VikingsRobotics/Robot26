@@ -229,6 +229,7 @@ private:
     ctre::phoenix6::StatusSignal<units::volt_t> driveMotorOutputVoltage;
 
     mutable frc::LinearFilter<units::turns_per_second_t> moduleSupplem;
+    mutable units::turns_per_second_t moduleSupplemSpeed;
 
     using turns_per_meter = units::compound_unit<units::turns, units::inverse<units::meters>>;
     using turns_per_meter_t = units::unit_t<turns_per_meter>;
@@ -404,6 +405,7 @@ private:
 
     units::turns_per_second_t ApplyVelocityCorrections(units::turns_per_second_t velocity, units::turn_t angleDifference) const;
     MotorTorqueFeedforwards CalculateMotorTorqueFeedforwards(units::newton_t wheelForceFeedforwardX, units::newton_t wheelForceFeedforwardY) const;
+    void UpdateModuleSupplem();
 
     friend class SwerveDrivetrain;
 };

@@ -9,8 +9,6 @@
 #include <frc/smartdashboard/MechanismLigament2d.h>
 #include <frc/util/Color8Bit.h>
 
-#include <frc2/command/SubsystemBase.h>
-
 #include <networktables/NetworkTable.h>
 #include <networktables/StructTopic.h>
 #include <networktables/StructArrayTopic.h>
@@ -21,7 +19,7 @@
 #include "swerve/SwerveDrivetrain.hpp"
 
 
-class SwerveSubsystem : public frc2::SubsystemBase, public SwerveDrivetrain {
+class SwerveSubsystem : public SwerveDrivetrain {
 public:
     SwerveSubsystem();
     SwerveSubsystem(SwerveSubsystem& rhs) = delete;
@@ -29,15 +27,12 @@ public:
     SwerveSubsystem(SwerveSubsystem&& rhs) = delete;
     SwerveSubsystem& operator=(SwerveSubsystem&& rhs) = delete;
 
-    void Periodic() override;
-
 public:
     using SwerveDrivetrain::AddVisionMeasurement;
     using SwerveDrivetrain::GetKinematics;
     using SwerveDrivetrain::GetModule;
     using SwerveDrivetrain::GetModuleLocations;
     using SwerveDrivetrain::GetModules;
-    using SwerveDrivetrain::GetOdometryFrequency;
     using SwerveDrivetrain::GetOperatorForwardDirection;
     using SwerveDrivetrain::GetPigeon2;
     using SwerveDrivetrain::GetState;

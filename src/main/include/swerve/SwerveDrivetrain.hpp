@@ -6,8 +6,9 @@
 #include "swerve/SwerveDrivePoseEstimator3d.hpp"
 #include "swerve/SwerveDrivetrainConstants.hpp"
 
+#include <frc2/command/SubsystemBase.h>
+
 #include <fmt/core.h>
-#include <frc/Notifier.h>
 
 #include <atomic>
 #include <span>
@@ -20,7 +21,7 @@ class SwerveRequest;
  *
  * This class handles the kinematics and odometry.
  */
-class SwerveDrivetrain {
+class SwerveDrivetrain : public frc2::SubsystemBase {
 public:
     /**
      * \brief Plain-Old-Data class holding the state of the swerve drivetrain.
@@ -104,9 +105,9 @@ private:
     SwerveDriveState cachedState{};
     std::function<void(SwerveDriveState const&)> telemetryFunction = [](SwerveDriveState const&) {};
 
-    units::hertz_t updateFrequency;
-
-    frc::Notifier odometryThread;
+    frc::LinearFilter<units::second_t> loopFilter;
+    units::second_t lastTimestamp;
+    wpi::array<ctre::phoenix6::BaseStatusSignal*, 32> allSignals;
 
 public:
     /**
@@ -116,7 +117,6 @@ public:
      * getters in the classes.
      *
      * \param drivetrainConstants        Drivetrain-wide constants for the swerve drive
-     * \param odometryUpdateFrequency    The frequency to run the odometry loop.
      * \param odometryStandardDeviation  The standard deviation for odometry calculation
      *                                   in the form [x, y, z, theta]ᵀ, with units in meters
      *                                   and radians
@@ -125,16 +125,10 @@ public:
      *                                   and radians
      * \param modules                    Constants for each specific module
      */
-    SwerveDrivetrain(SwerveDrivetrainConstants const& drivetrainConstants, units::hertz_t odometryUpdateFrequency,
-                     std::array<double, 4> const& odometryStandardDeviation, std::array<double, 4> const& visionStandardDeviation,
-                     std::span<SwerveModuleConstants const, 4> swerveModules);
+    SwerveDrivetrain(SwerveDrivetrainConstants const& drivetrainConstants, std::array<double, 4> const& odometryStandardDeviation,
+                     std::array<double, 4> const& visionStandardDeviation, std::span<SwerveModuleConstants const, 4> swerveModules);
 
-    /**
-     * \brief Gets the target odometry update frequency.
-     *
-     * \returns Target odometry update frequency
-     */
-    units::hertz_t GetOdometryFrequency() const { return updateFrequency; }
+    void Periodic() override;
 
     /**
      * \brief Gets a reference to the kinematics used for the drivetrain.

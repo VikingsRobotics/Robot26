@@ -23,11 +23,12 @@
 #include <fmt/format.h>
 
 SwerveSubsystem::SwerveSubsystem()
-    : SubsystemBase{"Swerve Subsystem"},
-      SwerveDrivetrain{Swerve::DeviceProperties::kDrivetrain, 50_Hz, std::array<double, 4>{0.9, 0.9, 0.9, 0.9}, std::array<double, 4>{0.1, 0.1, 0.1, 0.1},
+    : SwerveDrivetrain{Swerve::DeviceProperties::kDrivetrain, std::array<double, 4>{0.9, 0.9, 0.9, 0.9}, std::array<double, 4>{0.1, 0.1, 0.1, 0.1},
                        std::array<SwerveModuleConstants, 4>{Swerve::DeviceProperties::kFrontLeft, Swerve::DeviceProperties::kFrontRight,
                                                             Swerve::DeviceProperties::kBackLeft, Swerve::DeviceProperties::kBackRight}},
       MaxSpeed{Swerve::Mechanism::kMaxMovement} {
+    SetName("Swerve Subsystem");
+
     pathplanner::RobotConfig config = pathplanner::RobotConfig::fromGUISettings();
 
     pathplanner::AutoBuilder::configure(
@@ -62,11 +63,9 @@ static units::degree_t WrapAngle(units::degree_t angle) {
     return angle - 180_deg;
 }
 
-void SwerveSubsystem::Periodic() {
-    frc::SmartDashboard::PutNumber("Gyro Yaw (deg)", WrapAngle(GetState().Pose.ToPose2d().Rotation().Degrees())());
-}
-
 void SwerveSubsystem::Telemeterize(SwerveDriveState const& state) {
+    frc::SmartDashboard::PutNumber("Gyro Yaw (deg)", WrapAngle(state.Pose.ToPose2d().Rotation().Degrees())());
+
     drivePose.Set(state.Pose);
     driveSpeeds.Set(state.Speeds);
     driveModuleStates.Set(state.ModuleStates);
