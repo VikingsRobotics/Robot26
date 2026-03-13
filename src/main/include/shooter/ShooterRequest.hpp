@@ -6,6 +6,7 @@
 
 #include <units/math.h>
 #include <units/acceleration.h>
+#include <units/velocity.h>
 
 enum class FlywheelRequestType { kOpenLoop = 0, kClosedLoop = 1 };
 
@@ -24,7 +25,7 @@ public:
      * \param flywheel Motors to which the control request is applied
      * \returns Status code of sending the request
      */
-    virtual void Apply(ControlParameters const& parameters, Flywheel& flywheel) = 0;
+    virtual units::meters_per_second_t Apply(ControlParameters const& parameters, Flywheel& flywheel) = 0;
 };
 
 /**
@@ -33,14 +34,14 @@ public:
  */
 class Idle : public ShooterRequest {
 public:
-    void Apply(ShooterRequest::ControlParameters const&, ShooterRequest::Flywheel&) override {}
+    units::meters_per_second_t Apply(ShooterRequest::ControlParameters const&, ShooterRequest::Flywheel&) override { return -1_mps; }
 };
 
 class ShooterBrake : public ShooterRequest {
 public:
-    void Apply(ControlParameters const& parameters, Flywheel& flywheel) override {
+    units::meters_per_second_t Apply(ControlParameters const& parameters, Flywheel& flywheel) override {
         flywheel.motor.StopMotor();
-        flywheel.desired = 0_mps;
+        return 0_mps;
     }
 };
 
@@ -71,13 +72,15 @@ public:
      */
     FlywheelRequestType Type = FlywheelRequestType::kClosedLoop;
 
-    void Apply(ControlParameters const& parameters, Flywheel& flywheel) override {
-        flywheel.desired = ConvertMetersToTurns(parameters) * Clamp(Speeds, 0_tps, (parameters.kMaxSurfaceSpeed / ConvertMetersToTurns(parameters)));
+    units::meters_per_second_t Apply(ControlParameters const& parameters, Flywheel& flywheel) override {
+        units::meters_per_second_t desired =
+            ConvertMetersToTurns(parameters) * Clamp(Speeds, 0_tps, (parameters.kMaxSurfaceSpeed / ConvertMetersToTurns(parameters)));
         if (Type == FlywheelRequestType::kOpenLoop) {
             flywheel.motor.SetVoltage((Speeds / (parameters.kMaxSurfaceSpeed / ConvertMetersToTurns(parameters))) * 12_V);
         } else {
-            flywheel.controller.SetSetpoint(flywheel.desired(), rev::spark::SparkLowLevel::ControlType::kVelocity);
+            flywheel.controller.SetSetpoint(desired(), rev::spark::SparkLowLevel::ControlType::kVelocity);
         }
+        return desired;
     }
 
     /**
@@ -152,13 +155,14 @@ public:
      */
     FlywheelRequestType Type = FlywheelRequestType::kClosedLoop;
 
-    void Apply(ControlParameters const& parameters, Flywheel& flywheel) override {
-        flywheel.desired = Clamp(Speeds, 0_mps, parameters.kMaxSurfaceSpeed);
+    units::meters_per_second_t Apply(ControlParameters const& parameters, Flywheel& flywheel) override {
+        units::meters_per_second_t desired = Clamp(Speeds, 0_mps, parameters.kMaxSurfaceSpeed);
         if (Type == FlywheelRequestType::kOpenLoop) {
             flywheel.motor.SetVoltage((Speeds / parameters.kMaxSurfaceSpeed) * 12_V);
         } else {
-            flywheel.controller.SetSetpoint(flywheel.desired(), rev::spark::SparkLowLevel::ControlType::kVelocity);
+            flywheel.controller.SetSetpoint(desired(), rev::spark::SparkLowLevel::ControlType::kVelocity);
         }
+        return desired;
     }
     /**
      * \brief Modifies the Speeds parameter and returns itself.
@@ -283,7 +287,7 @@ public:
 
     FlywheelRequestType Type = FlywheelRequestType::kClosedLoop;
 
-    void Apply(ControlParameters const& parameters, Flywheel& flywheel) override {
+    units::meters_per_second_t Apply(ControlParameters const& parameters, Flywheel& flywheel) override {
         units::radian_t theta = parameters.shooterPose.Rotation().Y();
 
         units::meter_t shooterHeight = parameters.shooterPose.Z();
@@ -295,13 +299,12 @@ public:
         units::meter_t denominator = 2.0 * cosTheta * cosTheta * (targetDistance * tanTheta - heightDelta);
 
         if (denominator <= 0_m) {
-            ShooterBrake{}.Apply(parameters, flywheel);  // impossible shot geometry
-            return;
+            return ShooterBrake{}.Apply(parameters, flywheel);  // impossible shot geometry
         }
 
         units::meters_per_second_t requiredVelocity = units::math::sqrt(units::standard_gravity_t{1} * targetDistance * targetDistance / denominator);
 
-        SurfaceRequest{}.WithSpeeds(requiredVelocity).WithType(Type).Apply(parameters, flywheel);
+        return SurfaceRequest{}.WithSpeeds(requiredVelocity).WithType(Type).Apply(parameters, flywheel);
     }
 
     IdealDistanceRequest& WithDistance(units::meter_t distance) & {

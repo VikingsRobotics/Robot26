@@ -81,10 +81,11 @@ void ShooterFlywheel::Periodic() {
     requestParameters.timestamp = now;
     requestParameters.updatePeriod = averageLoopTime;
 
+    units::meters_per_second_t desired = -1_mps;
+
     if (requestToApply) {
         try {
-            flywheelMotorItems.desired = -1_mps;
-            requestToApply(requestParameters, flywheelMotorItems);
+            desired = requestToApply(requestParameters, flywheelMotorItems);
         } catch (const std::exception& e) {
             fmt::print("Flywheel request error: {}\n", e.what());
         }
@@ -95,7 +96,7 @@ void ShooterFlywheel::Periodic() {
         failedDaqs++;
         return;
     }
-    cachedState.TargetVelocity = flywheelMotorItems.desired;
+    cachedState.TargetVelocity = desired;
     cachedState.AppliedOutput = units::dimensionless::scalar_t{flywheelMotor.GetAppliedOutput()};
     if (flywheelMotor.GetLastError() != rev::REVLibError::kOk) {
         failedDaqs++;

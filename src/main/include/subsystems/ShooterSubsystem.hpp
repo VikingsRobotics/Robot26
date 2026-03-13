@@ -31,7 +31,7 @@ private:
     nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
 
     // Robot flywheel state
-    std::shared_ptr<nt::NetworkTable> flywheelStateTable = inst.GetTable("DriveState");
+    std::shared_ptr<nt::NetworkTable> flywheelStateTable = inst.GetTable("FlywheelState");
     nt::DoublePublisher velocity = flywheelStateTable->GetDoubleTopic("Velocity").Publish();
     nt::DoublePublisher targetVelocity = flywheelStateTable->GetDoubleTopic("TargetVelocity").Publish();
     nt::DoublePublisher appliedOutput = flywheelStateTable->GetDoubleTopic("AppliedOutput").Publish();

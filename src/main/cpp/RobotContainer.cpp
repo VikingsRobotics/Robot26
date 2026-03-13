@@ -19,8 +19,8 @@
 
 RobotContainer::RobotContainer() : joystick{Swerve::TeleopOperator::kDriverControllerPort}, controller{Shooter::TeleopOperator::kShooterControllerPort} {
     swerveSubsystem.SetDefaultCommand(SwerveJoystickAxisLimitedCommand{&swerveSubsystem, joystick});
-    shooterSubsystem.SetDefaultCommand(ShooterControllerCommand{&shooterSubsystem,controller});
-    
+    shooterSubsystem.SetDefaultCommand(ShooterControllerCommand{&shooterSubsystem, controller});
+
     ConfigureBindings();
     frc::DataLogManager::Stop();
 }
@@ -28,6 +28,7 @@ RobotContainer::RobotContainer() : joystick{Swerve::TeleopOperator::kDriverContr
 void RobotContainer::ConfigureBindings() {
     autoChooser = pathplanner::AutoBuilder::buildAutoChooser();
     frc::SmartDashboard::PutData(&swerveSubsystem);
+    frc::SmartDashboard::PutData(&shooterSubsystem);
 
     frc::SmartDashboard::PutData(&autoChooser);
 

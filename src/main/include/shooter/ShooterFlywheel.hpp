@@ -112,11 +112,10 @@ public:
     struct Flywheel {
         rev::spark::SparkFlex& motor;
         rev::spark::SparkClosedLoopController& controller;
-        units::meters_per_second_t desired{-1};
     };
 
     /** \brief Function type used to apply control to the flywheel */
-    using ShooterRequestFunc = std::function<void(ControlParameters const&, Flywheel&)>;
+    using ShooterRequestFunc = std::function<units::meters_per_second_t(ControlParameters const&, Flywheel&)>;
 
 private:
     rev::spark::SparkFlex flywheelMotor;
@@ -133,7 +132,7 @@ private:
 
     frc::Pose3d cachedRobotPose{};
 
-    ShooterRequestFunc requestToApply = [](ControlParameters const&, Flywheel&) {};
+    ShooterRequestFunc requestToApply = [](ControlParameters const&, Flywheel&) -> units::meters_per_second_t { return -1_mps; };
     ControlParameters requestParameters{};
 
     mutable std::recursive_mutex stateLock{};
@@ -162,7 +161,7 @@ public:
     template <std::derived_from<ShooterRequest> Request>
         requires(!std::is_const_v<Request>)
     void SetControl(Request& newRequest) {
-        SetControl([request = newRequest](auto const& params, auto modules) mutable { return request.Apply(params, modules); });
+        SetControl([request = newRequest](auto const& params, auto flywheel) mutable { return request.Apply(params, flywheel); });
     }
 
     /**
@@ -175,7 +174,7 @@ public:
     template <std::derived_from<ShooterRequest> Request>
         requires(!std::is_const_v<Request>)
     void SetControl(Request&& newRequest) {
-        SetControl([request = std::move(newRequest)](auto const& params, auto modules) mutable { return request.Apply(params, modules); });
+        SetControl([request = std::move(newRequest)](auto const& params, auto flywheel) mutable { return request.Apply(params, flywheel); });
     }
 
     /**
@@ -191,7 +190,7 @@ public:
         if (request) {
             requestToApply = std::move(request);
         } else {
-            requestToApply = [](auto&, auto&) {};
+            requestToApply = [](auto&, auto&) -> units::meters_per_second_t { return -1_mps; };
         }
     }
 

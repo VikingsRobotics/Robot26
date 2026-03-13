@@ -20,7 +20,7 @@ void ShooterControllerCommand::Execute() {
 
     double renormalized = 0.0;
 
-    if (control > deadband) {
+    if (control < -deadband) {
         renormalized = -(control + deadband) / (1 - deadband);
     }
 
