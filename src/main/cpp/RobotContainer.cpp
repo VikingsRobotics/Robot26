@@ -17,9 +17,10 @@
 
 #include <frc/DataLogManager.h>
 
-RobotContainer::RobotContainer() : joystick{Swerve::TeleopOperator::kDriverControllerPort} {
+RobotContainer::RobotContainer() : joystick{Swerve::TeleopOperator::kDriverControllerPort}, controller{Shooter::TeleopOperator::kShooterControllerPort} {
     swerveSubsystem.SetDefaultCommand(SwerveJoystickAxisLimitedCommand{&swerveSubsystem, joystick});
-
+    shooterSubsystem.SetDefaultCommand(ShooterControllerCommand{&shooterSubsystem,controller});
+    
     ConfigureBindings();
     frc::DataLogManager::Stop();
 }
@@ -35,6 +36,9 @@ void RobotContainer::ConfigureBindings() {
     frc::SmartDashboard::PutData(&lookSwerve);
 
     frc::SmartDashboard::PutData(&importantCommand);
+
+    swerveSubsystem.AddFunctionCallbackOnTelemerty(
+        [this](SwerveDrivetrain::SwerveDriveState const& state) { shooterSubsystem.UpdateShooterPosition(state.Pose); });
 }
 
 frc2::Command* RobotContainer::GetAutonomousCommand() {

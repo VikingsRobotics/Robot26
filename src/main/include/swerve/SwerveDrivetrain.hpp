@@ -77,8 +77,6 @@ public:
     using SwerveRequestFunc = std::function<void(ControlParameters const&, std::span<std::unique_ptr<SwerveModule> const, 4>)>;
 
 private:
-    friend class OdometryThread;
-
     ctre::phoenix6::CANBus canbus;
 
     ctre::phoenix6::hardware::Pigeon2 pigeon2;

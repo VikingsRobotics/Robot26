@@ -32,6 +32,7 @@
 
 #include "swerve/SwerveDrivetrainConstants.hpp"
 #include "swerve/SwerveModuleConstants.hpp"
+#include "shooter/ShooterFlywheelConstants.hpp"
 
 namespace DeviceIdentifier {
 // CTRE: CANBus Name for contructors of CRTE software classes
@@ -58,6 +59,8 @@ constexpr int kBLAngleMotorId = 11;
 constexpr int kBRDriveMotorId = 12;
 // REV: Neo 550 Back Right Angle Motor ID
 constexpr int kBRAngleMotorId = 13;
+// REV: Vortex Flywheel
+constexpr int kFlywheelId = 14;
 }  // namespace DeviceIdentifier
 
 namespace Swerve {
@@ -180,9 +183,6 @@ constexpr SwerveDrivetrainConstants kDrivetrain =
 
 }  // namespace DeviceProperties
 
-namespace System {
-extern frc::SwerveDriveKinematics<4> kDriveKinematics;
-}
 
 namespace TeleopOperator {
 // USB ID for joystick for driver
@@ -232,5 +232,51 @@ constexpr units::radians_per_second_squared_t kMaxAngularAcceleration = 3.9_tr_p
 }  // namespace Auto
 
 }  // namespace Swerve
+
+namespace Shooter {
+
+constexpr ShooterFlywheelConstants kFlywheel =
+    ShooterFlywheelConstants{}
+        .WithMotorId(DeviceIdentifier::kFlywheelId)
+        .WithLocation(frc::Transform3d{frc::Translation3d{}, frc::Rotation3d{}})
+        .WithMotorInverted(false)
+        .WithMotorGearRatio(units::dimensionless::scalar_t{1.0 / 1.0})
+        .WithWheelRadius(0.5_m)
+        .WithWheelMass(10_kg)
+        .WithSlipCurrent(120_A)
+        .WithMotorGains(ShooterFlywheelConstants::Slot0ConfigsRev{.kP = 1.0,
+                                                                  .kI = 0.0,
+                                                                  .kD = 0.0,
+                                                                  .dFilter = 0.0,
+                                                                  .iZone = 0.0,
+                                                                  .iMaxAccum = 0.0,
+                                                                  .minOut = -1.0,
+                                                                  .maxOut = 1.0,
+                                                                  .posWrapEnabled = false,
+                                                                  .posMinInput = 0.0,
+                                                                  .posMaxInput = 0.0,
+                                                                  .sensor = rev::spark::FeedbackSensor::kPrimaryEncoder,
+                                                                  .cruiseVelocity = 3_tps(),
+                                                                  .maxAcceleration = 3_tr_per_s_sq(),
+                                                                  .allowedError = 0.5,
+                                                                  .kS = 0.0,
+                                                                  .kV = 0.0,
+                                                                  .kA = 0.0})
+        .WithSpeedAt12Volts(6704_rpm);
+
+namespace TeleopOperator {
+// USB ID for Xbox controller for driver
+constexpr int kShooterControllerPort = 1;
+
+
+// Slew rate limiter for flywheel
+constexpr units::hertz_t kFlywheelLimiter = 1 / 1_s;
+// Minimum percent of joystick distance before flywheel response
+constexpr double kFlywheelDeadband = 0.1;
+// Maximum speed that the flywheel will move (under teleop)
+constexpr units::meters_per_second_t kFlywheelMaxSpeed = 3.0_mps;
+}  // namespace TeleopOperator
+
+}  // namespace Shooter
 
 #endif

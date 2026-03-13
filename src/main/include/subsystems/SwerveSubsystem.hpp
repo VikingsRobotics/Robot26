@@ -1,6 +1,6 @@
-#pragma once
 #ifndef SUBSYSTEM_SWERVE_H
 #define SUBSYSTEM_SWERVE_H
+#pragma once
 
 #include <vector>
 
@@ -9,12 +9,14 @@
 #include <frc/smartdashboard/MechanismLigament2d.h>
 #include <frc/util/Color8Bit.h>
 
+#include <networktables/NetworkTableInstance.h>
 #include <networktables/NetworkTable.h>
 #include <networktables/StructTopic.h>
 #include <networktables/StructArrayTopic.h>
 #include <networktables/DoubleTopic.h>
 #include <networktables/DoubleArrayTopic.h>
 
+#include <functional>
 
 #include "swerve/SwerveDrivetrain.hpp"
 
@@ -48,6 +50,9 @@ public:
     using SwerveDrivetrain::SetStateStdDevs;
     using SwerveDrivetrain::SetVisionMeasurementStdDevs;
     using SwerveDrivetrain::TareEverything;
+
+public:
+    void AddFunctionCallbackOnTelemerty(std::function<void(SwerveDriveState const&)> callback);
 
 private:
     void Telemeterize(SwerveDriveState const& state);

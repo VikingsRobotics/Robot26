@@ -15,10 +15,12 @@
 #include <frc2/command/button/CommandXboxController.h>
 
 #include "subsystems/SwerveSubsystem.hpp"
+#include "subsystems/ShooterSubsystem.hpp"
 
 #include "commands/SwerveJoystickAxisLimitedCommand.hpp"
 #include "commands/SwerveJoystickPolarLimitedCommand.hpp"
 #include "commands/SwerveJoystickLookTowardsCommand.hpp"
+#include "commands/ShooterControllerCommand.hpp"
 
 #include "commands/SwerveImportantCommand.hpp"
 
@@ -31,13 +33,18 @@ public:
 public:
     void ConfigureBindings();
     SwerveSubsystem swerveSubsystem{};
+    ShooterSubsystem shooterSubsystem{};
+
     frc::SendableChooser<frc2::Command*> autoChooser{};
 
     frc2::CommandJoystick joystick;
+    frc2::CommandXboxController controller;
 
     SwerveJoystickAxisLimitedCommand axisSwerve{&swerveSubsystem, joystick};
     SwerveJoystickPolarLimitedCommand polarSwerve{&swerveSubsystem, joystick};
     SwerveJoystickLookTowardsCommand lookSwerve{&swerveSubsystem, joystick};
+
+    ShooterControllerCommand controllerShooter{&shooterSubsystem, controller};
 
     SwerveImportantCommand importantCommand{&swerveSubsystem};
 };

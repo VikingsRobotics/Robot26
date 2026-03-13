@@ -63,6 +63,13 @@ static units::degree_t WrapAngle(units::degree_t angle) {
     return angle - 180_deg;
 }
 
+void SwerveSubsystem::AddFunctionCallbackOnTelemerty(std::function<void(SwerveDriveState const&)> callback) {
+    RegisterTelemetry([this, callback](SwerveDriveState const& state) {
+        Telemeterize(state);
+        callback(state);
+    });
+};
+
 void SwerveSubsystem::Telemeterize(SwerveDriveState const& state) {
     frc::SmartDashboard::PutNumber("Gyro Yaw (deg)", WrapAngle(state.Pose.ToPose2d().Rotation().Degrees())());
 
