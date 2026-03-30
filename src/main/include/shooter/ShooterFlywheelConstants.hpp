@@ -46,14 +46,6 @@ struct ShooterFlywheelConstants {
      */
     units::current::ampere_t SlipCurrent = 120_A;
 
-    /**
-     * \brief The steer motor closed-loop gains.
-     *
-     * Stupid library requires that you do all of this stupid stuff at in-place memory so here is temp
-     *
-     * When using closed-loop control, the flywheel motor uses these gains. These gains operate on flywheel rotations
-     * (after gear ratio).
-     */
     struct Slot0ConfigsRev {
         /**
          * Output rotation is affected by Position Conversion Factor
@@ -116,7 +108,17 @@ struct ShooterFlywheelConstants {
          * kA: volts per output velocity per second
          */
         double kS, kV, kA;
-    } MotorGains;
+    };
+
+    /**
+     * \brief The steer motor closed-loop gains.
+     *
+     * Stupid library requires that you do all of this stupid stuff at in-place memory so here is temp
+     *
+     * When using closed-loop control, the flywheel motor uses these gains. These gains operate on flywheel rotations
+     * (after gear ratio).
+     */
+    Slot0ConfigsRev MotorGains;
 
     /**
      * \brief When using open-loop flywheel control, this specifies the speed at which
@@ -125,6 +127,24 @@ struct ShooterFlywheelConstants {
      * ignored.
      */
     units::angular_velocity::turns_per_second_t SpeedAt12Volts = 0_tps;
+    /**
+     * \brief CAN ID of the feeder motor.
+     */
+    int FeederId = 1;
+    /**
+     * \brief True if the feeder motor is inverted.
+     */
+    bool FeederInverted = false;
+    /**
+     * \brief The steer motor closed-loop gains.
+     *
+     * Stupid library requires that you do all of this stupid stuff at in-place memory so here is temp
+     *
+     * When using closed-loop control, the feeder motor uses these gains. These gains operate on feeder rotations
+     * (after gear ratio).
+     */
+    Slot0ConfigsRev FeederGains;
+
     /**
      * \brief Modifies the MotorId parameter and returns itself.
      *
@@ -242,6 +262,42 @@ struct ShooterFlywheelConstants {
      */
     constexpr ShooterFlywheelConstants& WithSpeedAt12Volts(units::angular_velocity::turns_per_second_t speed) {
         this->SpeedAt12Volts = speed;
+        return *this;
+    }
+    /**
+     * \brief Modifies the FeederId parameter and returns itself.
+     *
+     * CAN ID of the feeder motor.
+     *
+     * \param newMotorId Parameter to modify
+     * \returns this object
+     */
+    constexpr ShooterFlywheelConstants& WithFeederId(int newMotorId) {
+        this->FeederId = newMotorId;
+        return *this;
+    }
+    /**
+     * \brief Modifies the FeederInverted parameter and returns itself.
+     *
+     * True if the feeder motor should be inverted.
+     *
+     * \param inverted Whether the motor is inverted
+     * \returns this object
+     */
+    constexpr ShooterFlywheelConstants& WithFeederInverted(bool inverted) {
+        this->FeederInverted = inverted;
+        return *this;
+    }
+    /**
+     * \brief Modifies the FeederGains parameter and returns itself.
+     *
+     * Closed-loop control gains for the feeder controller.
+     *
+     * \param gains Closed-loop gain configuration
+     * \returns this object
+     */
+    constexpr ShooterFlywheelConstants& WithFeederGains(const Slot0ConfigsRev& gains) {
+        this->FeederGains = gains;
         return *this;
     }
 };

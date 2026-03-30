@@ -1,4 +1,5 @@
 #include "swerve/SwerveDrivePoseEstimator3d.hpp"
+#include "wpimath/MathShared.h"
 
 #include <frc/Timer.h>
 
@@ -7,6 +8,8 @@ SwerveDrivePoseEstimator3d::SwerveDrivePoseEstimator3d(SwerveDriveKinematics con
                                                        WheelPositions modulePositions, frc::Pose3d initialPose, std::array<double, 4> const& stateStdDevs,
                                                        std::array<double, 4> const& visionMeasurementStdDevs)
     : m_odometry{kinematics, gyroAngle, modulePositions, initialPose} {
+    wpi::math::MathSharedStore::ReportUsage(wpi::math::MathUsageId::kEstimator_PoseEstimator3d, 1);
+
     m_q[0] = stateStdDevs[0] * stateStdDevs[0];
     m_q[1] = stateStdDevs[1] * stateStdDevs[1];
     m_q[2] = stateStdDevs[2] * stateStdDevs[2];
@@ -38,14 +41,14 @@ void SwerveDrivePoseEstimator3d::ResetPosition(frc::Rotation3d const& gyroAngle,
     m_odometry.ResetPosition(gyroAngle, std::move(wheelPositions), pose);
     m_odometryPoseBuffer.Clear();
     m_visionUpdates.clear();
-    m_poseEstimate = m_odometry.Pose();
+    m_poseEstimate = m_odometry.GetPose();
 }
 
 void SwerveDrivePoseEstimator3d::ResetPose(frc::Pose3d const& pose) {
     m_odometry.ResetPose(pose);
     m_odometryPoseBuffer.Clear();
     m_visionUpdates.clear();
-    m_poseEstimate = m_odometry.Pose();
+    m_poseEstimate = m_odometry.GetPose();
 }
 
 void SwerveDrivePoseEstimator3d::ResetTranslation(frc::Translation3d const& translation) {
@@ -60,9 +63,9 @@ void SwerveDrivePoseEstimator3d::ResetTranslation(frc::Translation3d const& tran
         const VisionUpdate visionUpdate{frc::Pose3d{translation, latestVisionUpdate->second.visionPose.Rotation()},
                                         frc::Pose3d{translation, latestVisionUpdate->second.odometryPose.Rotation()}};
         m_visionUpdates[latestVisionUpdate->first] = visionUpdate;
-        m_poseEstimate = visionUpdate.Compensate(m_odometry.Pose());
+        m_poseEstimate = visionUpdate.Compensate(m_odometry.GetPose());
     } else {
-        m_poseEstimate = m_odometry.Pose();
+        m_poseEstimate = m_odometry.GetPose();
     }
 }
 
@@ -78,9 +81,9 @@ void SwerveDrivePoseEstimator3d::ResetRotation(frc::Rotation3d const& rotation) 
         VisionUpdate const visionUpdate{frc::Pose3d{latestVisionUpdate->second.visionPose.Translation(), rotation},
                                         frc::Pose3d{latestVisionUpdate->second.odometryPose.Translation(), rotation}};
         m_visionUpdates[latestVisionUpdate->first] = visionUpdate;
-        m_poseEstimate = visionUpdate.Compensate(m_odometry.Pose());
+        m_poseEstimate = visionUpdate.Compensate(m_odometry.GetPose());
     } else {
-        m_poseEstimate = m_odometry.Pose();
+        m_poseEstimate = m_odometry.GetPose();
     }
 }
 
@@ -150,7 +153,7 @@ void SwerveDrivePoseEstimator3d::AddVisionMeasurement(frc::Pose3d const& visionR
     auto firstAfter = m_visionUpdates.upper_bound(timestamp);
     m_visionUpdates.erase(firstAfter, m_visionUpdates.end());
 
-    m_poseEstimate = visionUpdate.Compensate(m_odometry.Pose());
+    m_poseEstimate = visionUpdate.Compensate(m_odometry.GetPose());
 }
 
 void SwerveDrivePoseEstimator3d::AddVisionMeasurement(frc::Pose3d const& visionRobotPose, units::second_t timestamp,

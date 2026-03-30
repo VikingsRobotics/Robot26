@@ -61,6 +61,8 @@ constexpr int kBRDriveMotorId = 12;
 constexpr int kBRAngleMotorId = 13;
 // REV: Vortex Flywheel
 constexpr int kFlywheelId = 14;
+// REV: Neo V1.1 Flywheel
+constexpr int kFeederId = 15;
 }  // namespace DeviceIdentifier
 
 namespace Swerve {
@@ -241,8 +243,8 @@ constexpr ShooterFlywheelConstants kFlywheel =
         .WithLocation(frc::Transform3d{frc::Translation3d{}, frc::Rotation3d{}})
         .WithMotorInverted(false)
         .WithMotorGearRatio(units::dimensionless::scalar_t{1.0 / 1.0})
-        .WithWheelRadius(0.5_m)
-        .WithWheelMass(10_kg)
+        .WithWheelRadius(2_in)
+        .WithWheelMass(0.6_lb)
         .WithSlipCurrent(120_A)
         .WithMotorGains(ShooterFlywheelConstants::Slot0ConfigsRev{.kP = 1.0,
                                                                   .kI = 0.0,
@@ -258,11 +260,31 @@ constexpr ShooterFlywheelConstants kFlywheel =
                                                                   .sensor = rev::spark::FeedbackSensor::kPrimaryEncoder,
                                                                   .cruiseVelocity = 3_tps(),
                                                                   .maxAcceleration = 3_tr_per_s_sq(),
-                                                                  .allowedError = 0.5,
+                                                                  .allowedError = 0.25,
                                                                   .kS = 0.0,
                                                                   .kV = 0.0,
                                                                   .kA = 0.0})
-        .WithSpeedAt12Volts(6704_rpm);
+        .WithSpeedAt12Volts(6704_rpm)
+        .WithFeederId(DeviceIdentifier::kFeederId)
+        .WithFeederInverted(false)
+        .WithFeederGains(ShooterFlywheelConstants::Slot0ConfigsRev{.kP = 1.0,
+                                                                   .kI = 0.0,
+                                                                   .kD = 0.0,
+                                                                   .dFilter = 0.0,
+                                                                   .iZone = 0.0,
+                                                                   .iMaxAccum = 0.0,
+                                                                   .minOut = -1.0,
+                                                                   .maxOut = 1.0,
+                                                                   .posWrapEnabled = false,
+                                                                   .posMinInput = 0.0,
+                                                                   .posMaxInput = 0.0,
+                                                                   .sensor = rev::spark::FeedbackSensor::kPrimaryEncoder,
+                                                                   .cruiseVelocity = 15,
+                                                                   .maxAcceleration = 15,
+                                                                   .allowedError = 0.1,
+                                                                   .kS = 0.0,
+                                                                   .kV = 0.0,
+                                                                   .kA = 0.0});
 
 namespace TeleopOperator {
 // USB ID for Xbox controller for driver

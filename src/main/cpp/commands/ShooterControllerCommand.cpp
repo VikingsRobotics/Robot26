@@ -24,7 +24,14 @@ void ShooterControllerCommand::Execute() {
         renormalized = -(control + deadband) / (1 - deadband);
     }
 
-    m_subsystem->SetControl(SurfaceRequest{}.WithSpeeds(renormalized * Shooter::TeleopOperator::kFlywheelMaxSpeed).WithType(FlywheelRequestType::kClosedLoop));
+    if (renormalized > 0.0)
+        m_subsystem->SetControl(SurfaceRequest{}
+                                    .WithSpeeds(renormalized * Shooter::TeleopOperator::kFlywheelMaxSpeed)
+                                    .WithType(FlywheelRequestType::kClosedLoop)
+                                    .WithFeederSpeed(units::dimensionless::scalar_t{8.0})
+                                    .WithFeederTime(0.7_s));
+    else
+        m_subsystem->SetControl(ShooterBrake{});
 }
 
 void ShooterControllerCommand::End(bool interrupted) {

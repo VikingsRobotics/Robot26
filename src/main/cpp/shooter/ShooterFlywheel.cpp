@@ -1,7 +1,7 @@
 #include "shooter/ShooterFlywheel.hpp"
 
 #include <rev/config/SparkFlexConfig.h>
-#include <frc/Timer.h>
+#include <rev/config/SparkMaxConfig.h>
 
 using namespace rev::spark;
 
@@ -43,11 +43,46 @@ static void ConfigureFlywheelFromConstants(rev::spark::SparkFlex& motor, const S
                     rev::ResetMode::kNoResetSafeParameters, rev::PersistMode::kPersistParameters);
 }
 
+static void ConfigureFeederFromConstants(rev::spark::SparkMax& feeder, const ShooterFlywheelConstants& configs) {
+    SparkMaxConfig flywheelConfig{};
+
+    flywheelConfig.Apply(SparkBaseConfig::Presets::REV_NEO());
+    flywheelConfig.Inverted(configs.MotorInverted);
+    flywheelConfig.SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
+
+    ClosedLoopConfig flywheelClosedLoopConfig;
+    flywheelClosedLoopConfig.SetFeedbackSensor(FeedbackSensor::kPrimaryEncoder)
+        .PositionWrappingEnabled(configs.MotorGains.posWrapEnabled)
+        .PositionWrappingInputRange(configs.MotorGains.posMinInput, configs.MotorGains.posMaxInput)
+        .MinOutput(configs.MotorGains.minOut)
+        .MaxOutput(configs.MotorGains.maxOut);
+    flywheelClosedLoopConfig.maxMotion.CruiseVelocity(configs.MotorGains.cruiseVelocity, kSlot0)
+        .MaxAcceleration(configs.MotorGains.maxAcceleration, kSlot0)
+        .PositionMode(MAXMotionConfig::MAXMotionPositionMode::kMAXMotionTrapezoidal)
+        .AllowedProfileError(configs.MotorGains.allowedError, kSlot0);
+    flywheelClosedLoopConfig.Pid(configs.MotorGains.kP, configs.MotorGains.kI, configs.MotorGains.kD, kSlot0)
+        .DFilter(configs.MotorGains.dFilter)
+        .IZone(configs.MotorGains.iZone)
+        .IMaxAccum(configs.MotorGains.iMaxAccum);
+    flywheelClosedLoopConfig.feedForward.sva(configs.MotorGains.kS, configs.MotorGains.kV, configs.MotorGains.kA, kSlot0);
+
+    SignalsConfig flywheelSignalConfig;
+
+    flywheelSignalConfig.SetpointAlwaysOn(true).SetpointPeriodMs(20_ms());
+    flywheelSignalConfig.PrimaryEncoderVelocityAlwaysOn(true).PrimaryEncoderVelocityPeriodMs(20_ms());
+
+    feeder.Configure(flywheelConfig.Apply(flywheelClosedLoopConfig).Apply(flywheelSignalConfig), rev::ResetMode::kNoResetSafeParameters,
+                     rev::PersistMode::kPersistParameters);
+}
+
 ShooterFlywheel::ShooterFlywheel(ShooterFlywheelConstants const& flywheelConstants)
     : flywheelMotor{flywheelConstants.MotorId, rev::spark::SparkLowLevel::MotorType::kBrushless},
       flywheelEncoder{flywheelMotor.GetEncoder()},
       flywheelController{flywheelMotor.GetClosedLoopController()},
-      flywheelMotorItems{flywheelMotor, flywheelController},
+      feederMotor{flywheelConstants.FeederId, rev::spark::SparkLowLevel::MotorType::kBrushless},
+      feederEncoder{feederMotor.GetEncoder()},
+      feederController{feederMotor.GetClosedLoopController()},
+      flywheelMotorItems{flywheelMotor, flywheelController, feederMotor, feederController},
       kGearRatio{flywheelConstants.MotorGearRatio},
       kWheelMaxSpeed{(flywheelConstants.SpeedAt12Volts * flywheelConstants.WheelRadius * 2 * std::numbers::pi) / (flywheelConstants.MotorGearRatio * 1_tr)},
       kWheelRadius{flywheelConstants.WheelRadius},
@@ -55,13 +90,12 @@ ShooterFlywheel::ShooterFlywheel(ShooterFlywheelConstants const& flywheelConstan
       kShooterLocation{flywheelConstants.Location},
       loopFilter{frc::LinearFilter<units::second_t>::MovingAverage(50)} {
     ConfigureFlywheelFromConstants(flywheelMotor, flywheelConstants);
+    ConfigureFeederFromConstants(feederMotor, flywheelConstants);
 }
 
 void ShooterFlywheel::Periodic() {
     static int32_t failedDaqs = 0;
     static int32_t successfulDaqs = 0;
-
-    std::lock_guard lock(stateLock);
 
     const units::second_t now = frc::Timer::GetTimestamp();
     const units::second_t dt = now - lastTimestamp;

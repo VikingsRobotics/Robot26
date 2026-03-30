@@ -85,8 +85,6 @@ void SwerveDrivetrain::Periodic() {
     }
     successfulDaqs++;
 
-    std::lock_guard lock(stateLock);
-
     const units::second_t now = frc::Timer::GetTimestamp();
     const units::second_t dt = now - lastTimestamp;
     lastTimestamp = now;

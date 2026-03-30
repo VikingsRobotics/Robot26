@@ -10,18 +10,17 @@
 #include <units/time.h>
 
 #include <rev/SparkFlex.h>
+#include <rev/SparkMax.h>
 
 #include <frc/filter/LinearFilter.h>
+#include <frc/Timer.h>
 
 #include <frc2/command/SubsystemBase.h>
 
 #include <fmt/core.h>
 
 #include <cmath>
-#include <mutex>
-#include <atomic>
 #include <span>
-#include <thread>
 
 class ShooterRequest;
 
@@ -112,6 +111,8 @@ public:
     struct Flywheel {
         rev::spark::SparkFlex& motor;
         rev::spark::SparkClosedLoopController& controller;
+        rev::spark::SparkMax& feeder;
+        rev::spark::SparkClosedLoopController& feederControl;
     };
 
     /** \brief Function type used to apply control to the flywheel */
@@ -121,6 +122,9 @@ private:
     rev::spark::SparkFlex flywheelMotor;
     rev::spark::SparkRelativeEncoder flywheelEncoder;
     rev::spark::SparkClosedLoopController flywheelController;
+    rev::spark::SparkMax feederMotor;
+    rev::spark::SparkRelativeEncoder feederEncoder;
+    rev::spark::SparkClosedLoopController feederController;
 
     mutable Flywheel flywheelMotorItems;
 
@@ -135,7 +139,6 @@ private:
     ShooterRequestFunc requestToApply = [](ControlParameters const&, Flywheel&) -> units::meters_per_second_t { return -1_mps; };
     ControlParameters requestParameters{};
 
-    mutable std::recursive_mutex stateLock{};
     ShooterState cachedState{};
 
     /** \brief Function called whenever the shooter state is updated */
@@ -156,12 +159,13 @@ public:
      * at least as long as the flywheel subsystem. Typically this means storing
      * the request as a member variable of the robot or subsystem.
      *
-     * \param newRequest Request to apply
+     * \param request Request to apply
      */
     template <std::derived_from<ShooterRequest> Request>
         requires(!std::is_const_v<Request>)
-    void SetControl(Request& newRequest) {
-        SetControl([request = newRequest](auto const& params, auto flywheel) mutable { return request.Apply(params, flywheel); });
+    void SetControl(Request& request) {
+        request.startTimestamp = frc::Timer::GetTimestamp();
+        SetControl([request](auto const& params, auto flywheel) mutable { return request.Apply(params, flywheel); });
     }
 
     /**
@@ -174,6 +178,7 @@ public:
     template <std::derived_from<ShooterRequest> Request>
         requires(!std::is_const_v<Request>)
     void SetControl(Request&& newRequest) {
+        newRequest.startTimestamp = frc::Timer::GetTimestamp();
         SetControl([request = std::move(newRequest)](auto const& params, auto flywheel) mutable { return request.Apply(params, flywheel); });
     }
 
@@ -185,8 +190,6 @@ public:
      * \param request Control function to apply
      */
     void SetControl(ShooterRequestFunc&& request) {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-
         if (request) {
             requestToApply = std::move(request);
         } else {
@@ -203,10 +206,7 @@ public:
      *
      * \param robotLocation Position of the robot
      */
-    void UpdateShooterPosition(frc::Pose3d robotLocation) {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-        cachedRobotPose = robotLocation;
-    }
+    void UpdateShooterPosition(frc::Pose3d robotLocation) { cachedRobotPose = robotLocation; }
 
     /**
      * \brief Immediately runs a temporary control function.
@@ -219,10 +219,7 @@ public:
      *
      * \param request Temporary control function to invoke
      */
-    void RunTempRequest(ShooterRequestFunc&& request) const {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-        request(requestParameters, flywheelMotorItems);
-    }
+    void RunTempRequest(ShooterRequestFunc&& request) const { request(requestParameters, flywheelMotorItems); }
 
     /**
      * \brief Gets the transform of the shooter flywheel subsystem.
@@ -243,10 +240,7 @@ public:
      *
      * \returns Current shooter state snapshot
      */
-    ShooterState GetState() const {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-        return cachedState;
-    }
+    ShooterState GetState() const { return cachedState; }
 
     /**
      * \brief Registers a telemetry callback executed whenever ShooterState is updated.
@@ -261,10 +255,7 @@ public:
      *
      * \param func Telemetry or logging function
      */
-    void RegisterTelemetry(std::function<void(ShooterState const&)> func) {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-        telemetryFunction = std::move(func);
-    }
+    void RegisterTelemetry(std::function<void(ShooterState const&)> func) { telemetryFunction = std::move(func); }
 };
 
 #endif

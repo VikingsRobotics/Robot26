@@ -27,16 +27,16 @@ RobotContainer::RobotContainer() : joystick{Swerve::TeleopOperator::kDriverContr
 
 void RobotContainer::ConfigureBindings() {
     autoChooser = pathplanner::AutoBuilder::buildAutoChooser();
-    frc::SmartDashboard::PutData(&swerveSubsystem);
-    frc::SmartDashboard::PutData(&shooterSubsystem);
+    // frc::SmartDashboard::PutData(&swerveSubsystem);
+    // frc::SmartDashboard::PutData(&shooterSubsystem);
 
-    frc::SmartDashboard::PutData(&autoChooser);
+    // frc::SmartDashboard::PutData(&autoChooser);
 
-    frc::SmartDashboard::PutData(&axisSwerve);
-    frc::SmartDashboard::PutData(&polarSwerve);
-    frc::SmartDashboard::PutData(&lookSwerve);
+    // frc::SmartDashboard::PutData(&axisSwerve);
+    // frc::SmartDashboard::PutData(&polarSwerve);
+    // frc::SmartDashboard::PutData(&lookSwerve);
 
-    frc::SmartDashboard::PutData(&importantCommand);
+    // frc::SmartDashboard::PutData(&importantCommand);
 
     swerveSubsystem.AddFunctionCallbackOnTelemerty(
         [this](SwerveDrivetrain::SwerveDriveState const& state) { shooterSubsystem.UpdateShooterPosition(state.Pose); });

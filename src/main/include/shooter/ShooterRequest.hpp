@@ -15,6 +15,10 @@ public:
     using ControlParameters = ShooterFlywheel::ControlParameters;
     using Flywheel = ShooterFlywheel::Flywheel;
 
+public:
+    units::second_t startTimestamp{0};
+
+public:
     virtual ~ShooterRequest() = default;
 
     /**
@@ -41,6 +45,7 @@ class ShooterBrake : public ShooterRequest {
 public:
     units::meters_per_second_t Apply(ControlParameters const& parameters, Flywheel& flywheel) override {
         flywheel.motor.StopMotor();
+        flywheel.feeder.StopMotor();
         return 0_mps;
     }
 };
@@ -71,6 +76,15 @@ public:
      * \brief The type of output to apply to the flywheel.
      */
     FlywheelRequestType Type = FlywheelRequestType::kClosedLoop;
+    /**
+     * \brief The speeds to apply to the feeder.
+     */
+    units::dimensionless::scalar_t FeederSpeed{};
+    /**
+     * \brief The when (after start) to apply to the feeder.
+     */
+    units::second_t FeederThreshold{};
+
 
     units::meters_per_second_t Apply(ControlParameters const& parameters, Flywheel& flywheel) override {
         units::meters_per_second_t desired =
@@ -79,6 +93,12 @@ public:
             flywheel.motor.SetVoltage((Speeds / (parameters.kMaxSurfaceSpeed / ConvertMetersToTurns(parameters))) * 12_V);
         } else {
             flywheel.controller.SetSetpoint(desired(), rev::spark::SparkLowLevel::ControlType::kVelocity);
+        }
+
+        if (parameters.timestamp - startTimestamp > FeederThreshold) {
+            flywheel.feederControl.SetSetpoint(FeederSpeed(), rev::spark::SparkLowLevel::ControlType::kVelocity);
+        } else {
+            flywheel.feeder.StopMotor();
         }
         return desired;
     }
@@ -142,6 +162,58 @@ public:
         this->Type = std::move(newType);
         return std::move(*this);
     }
+
+    /**
+     * \brief Modifies the FeederSpeed parameter and returns itself.
+     *
+     * The feeder operates with closed loop where feedback is used.
+     *
+     * \param newSpeed Parameter to modify
+     * \returns this object
+     */
+    RotationRequest& WithFeederSpeed(units::dimensionless::scalar_t newSpeed) & {
+        this->FeederSpeed = std::move(newSpeed);
+        return *this;
+    }
+    /**
+     * \brief Modifies the FeederSpeed parameter and returns itself.
+     *
+     * The feeder operates with closed loop where feedback is used.
+     *
+     * \param newSpeed Parameter to modify
+     * \returns this object
+     */
+    RotationRequest&& WithFeederSpeed(units::dimensionless::scalar_t newSpeed) && {
+        this->FeederSpeed = std::move(newSpeed);
+        return std::move(*this);
+    }
+
+    /**
+     * \brief Modifies the FeederThreshold parameter and returns itself.
+     *
+     * The feeder operates after FeederThreshold time is passed after starting.
+     * Use 0_s to activate right away.
+     *
+     * \param newThreshold Parameter to modify
+     * \returns this object
+     */
+    RotationRequest& WithFeederTime(units::second_t newThreshold) & {
+        this->FeederThreshold = std::move(newThreshold);
+        return *this;
+    }
+    /**
+     * \brief Modifies the FeederThreshold parameter and returns itself.
+     *
+     * The feeder operates after FeederThreshold time is passed after starting.
+     * Use 0_s to activate right away.
+     *
+     * \param newThreshold Parameter to modify
+     * \returns this object
+     */
+    RotationRequest&& WithFeederTime(units::second_t newThreshold) && {
+        this->FeederThreshold = std::move(newThreshold);
+        return std::move(*this);
+    }
 };
 
 class SurfaceRequest : public ShooterRequest {
@@ -154,6 +226,14 @@ public:
      * \brief The type of output to apply to the flywheel.
      */
     FlywheelRequestType Type = FlywheelRequestType::kClosedLoop;
+    /**
+     * \brief The speeds to apply to the feeder.
+     */
+    units::dimensionless::scalar_t FeederSpeed{};
+    /**
+     * \brief The when (after start) to apply to the feeder.
+     */
+    units::second_t FeederThreshold{};
 
     units::meters_per_second_t Apply(ControlParameters const& parameters, Flywheel& flywheel) override {
         units::meters_per_second_t desired = Clamp(Speeds, 0_mps, parameters.kMaxSurfaceSpeed);
@@ -222,6 +302,58 @@ public:
         this->Type = std::move(newType);
         return std::move(*this);
     }
+
+    /**
+     * \brief Modifies the FeederSpeed parameter and returns itself.
+     *
+     * The feeder operates with closed loop where feedback is used.
+     *
+     * \param newSpeed Parameter to modify
+     * \returns this object
+     */
+    SurfaceRequest& WithFeederSpeed(units::dimensionless::scalar_t newSpeed) & {
+        this->FeederSpeed = std::move(newSpeed);
+        return *this;
+    }
+    /**
+     * \brief Modifies the FeederSpeed parameter and returns itself.
+     *
+     * The feeder operates with closed loop where feedback is used.
+     *
+     * \param newSpeed Parameter to modify
+     * \returns this object
+     */
+    SurfaceRequest&& WithFeederSpeed(units::dimensionless::scalar_t newSpeed) && {
+        this->FeederSpeed = std::move(newSpeed);
+        return std::move(*this);
+    }
+
+    /**
+     * \brief Modifies the FeederThreshold parameter and returns itself.
+     *
+     * The feeder operates after FeederThreshold time is passed after starting.
+     * Use 0_s to activate right away.
+     *
+     * \param newThreshold Parameter to modify
+     * \returns this object
+     */
+    SurfaceRequest& WithFeederTime(units::second_t newThreshold) & {
+        this->FeederThreshold = std::move(newThreshold);
+        return *this;
+    }
+    /**
+     * \brief Modifies the FeederThreshold parameter and returns itself.
+     *
+     * The feeder operates after FeederThreshold time is passed after starting.
+     * Use 0_s to activate right away.
+     *
+     * \param newThreshold Parameter to modify
+     * \returns this object
+     */
+    SurfaceRequest&& WithFeederTime(units::second_t newThreshold) && {
+        this->FeederThreshold = std::move(newThreshold);
+        return std::move(*this);
+    }
 };
 /**
  * \brief Calculates the flywheel surface velocity required to hit a target at a
@@ -287,6 +419,15 @@ public:
 
     FlywheelRequestType Type = FlywheelRequestType::kClosedLoop;
 
+    /**
+     * \brief The speeds to apply to the feeder.
+     */
+    units::dimensionless::scalar_t FeederSpeed{};
+    /**
+     * \brief The when (after start) to apply to the feeder.
+     */
+    units::second_t FeederThreshold{};
+
     units::meters_per_second_t Apply(ControlParameters const& parameters, Flywheel& flywheel) override {
         units::radian_t theta = parameters.shooterPose.Rotation().Y();
 
@@ -304,7 +445,12 @@ public:
 
         units::meters_per_second_t requiredVelocity = units::math::sqrt(units::standard_gravity_t{1} * targetDistance * targetDistance / denominator);
 
-        return SurfaceRequest{}.WithSpeeds(requiredVelocity).WithType(Type).Apply(parameters, flywheel);
+        return SurfaceRequest{}
+            .WithSpeeds(requiredVelocity)
+            .WithType(Type)
+            .WithFeederSpeed(FeederSpeed)
+            .WithFeederTime(FeederThreshold)
+            .Apply(parameters, flywheel);
     }
 
     IdealDistanceRequest& WithDistance(units::meter_t distance) & {
@@ -334,6 +480,58 @@ public:
 
     IdealDistanceRequest&& WithType(FlywheelRequestType newType) && {
         this->Type = std::move(newType);
+        return std::move(*this);
+    }
+
+    /**
+     * \brief Modifies the FeederSpeed parameter and returns itself.
+     *
+     * The feeder operates with closed loop where feedback is used.
+     *
+     * \param newSpeed Parameter to modify
+     * \returns this object
+     */
+    IdealDistanceRequest& WithFeederSpeed(units::dimensionless::scalar_t newSpeed) & {
+        this->FeederSpeed = std::move(newSpeed);
+        return *this;
+    }
+    /**
+     * \brief Modifies the FeederSpeed parameter and returns itself.
+     *
+     * The feeder operates with closed loop where feedback is used.
+     *
+     * \param newSpeed Parameter to modify
+     * \returns this object
+     */
+    IdealDistanceRequest&& WithFeederSpeed(units::dimensionless::scalar_t newSpeed) && {
+        this->FeederSpeed = std::move(newSpeed);
+        return std::move(*this);
+    }
+
+    /**
+     * \brief Modifies the FeederThreshold parameter and returns itself.
+     *
+     * The feeder operates after FeederThreshold time is passed after starting.
+     * Use 0_s to activate right away.
+     *
+     * \param newThreshold Parameter to modify
+     * \returns this object
+     */
+    IdealDistanceRequest& WithFeederTime(units::second_t newThreshold) & {
+        this->FeederThreshold = std::move(newThreshold);
+        return *this;
+    }
+    /**
+     * \brief Modifies the FeederThreshold parameter and returns itself.
+     *
+     * The feeder operates after FeederThreshold time is passed after starting.
+     * Use 0_s to activate right away.
+     *
+     * \param newThreshold Parameter to modify
+     * \returns this object
+     */
+    IdealDistanceRequest&& WithFeederTime(units::second_t newThreshold) && {
+        this->FeederThreshold = std::move(newThreshold);
         return std::move(*this);
     }
 };

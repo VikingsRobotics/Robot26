@@ -10,9 +10,7 @@
 
 #include <fmt/core.h>
 
-#include <atomic>
 #include <span>
-#include <thread>
 
 class SwerveRequest;
 
@@ -99,7 +97,6 @@ private:
     SwerveRequestFunc requestToApply = [](ControlParameters const&, std::span<std::unique_ptr<SwerveModule> const, 4>) {};
     ControlParameters requestParameters{};
 
-    mutable std::recursive_mutex stateLock{};
     SwerveDriveState cachedState{};
     std::function<void(SwerveDriveState const&)> telemetryFunction = [](SwerveDriveState const&) {};
 
@@ -142,12 +139,12 @@ public:
      * at least as long as the drivetrain. This can be done by storing the
      * request as a member variable of your drivetrain subsystem or robot.
      *
-     * \param newRequest Request to apply
+     * \param request Request to apply
      */
     template <std::derived_from<SwerveRequest> Request>
         requires(!std::is_const_v<Request>)
-    void SetControl(Request& newRequest) {
-        SetControl([request = newRequest](auto const& params, auto modules) mutable { return request.Apply(params, modules); });
+    void SetControl(Request& request) {
+        SetControl([request](auto const& params, auto modules) mutable { return request.Apply(params, modules); });
     }
 
     /**
@@ -167,7 +164,6 @@ public:
      * \param request Request function to apply
      */
     void SetControl(SwerveRequestFunc&& request) {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
         if (request) {
             requestToApply = std::move(request);
         } else {
@@ -184,10 +180,7 @@ public:
      *
      * \param request Request function to invoke
      */
-    void RunTempRequest(SwerveRequestFunc&& request) const {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-        request(requestParameters, modules);
-    }
+    void RunTempRequest(SwerveRequestFunc&& request) const { request(requestParameters, modules); }
 
     /**
      * \brief Gets the current state of the swerve drivetrain.
@@ -196,10 +189,7 @@ public:
      *
      * \returns Current state of the drivetrain
      */
-    SwerveDriveState GetState() const {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-        return cachedState;
-    }
+    SwerveDriveState GetState() const { return cachedState; }
 
     /**
      * \brief Register the specified lambda to be executed whenever the SwerveDriveState
@@ -214,10 +204,7 @@ public:
      *
      * \param func Function to call for telemetry or logging
      */
-    void RegisterTelemetry(std::function<void(SwerveDriveState const&)> func) {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-        telemetryFunction = std::move(func);
-    }
+    void RegisterTelemetry(std::function<void(SwerveDriveState const&)> func) { telemetryFunction = std::move(func); }
 
     /**
      * \brief Zero's this swerve drive's odometry entirely.
@@ -225,8 +212,6 @@ public:
      * This will zero the entire odometry, and place the robot at 0,0
      */
     void TareEverything() {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-
         for (size_t i = 0; i < modules.size(); ++i) {
             modules[i]->ResetPosition();
             modulePositions[i] = modules[i]->GetPosition(true);
@@ -257,8 +242,6 @@ public:
      * \param pose Pose to make the current pose
      */
     void ResetPose(frc::Pose3d const& pose) {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-
         odometry.ResetPose(pose);
         /* We need to update our cached pose immediately to prevent race conditions */
         cachedState.Pose = odometry.GetEstimatedPosition();
@@ -272,8 +255,6 @@ public:
      * \param translation Translation to make the current translation
      */
     void ResetTranslation(frc::Translation3d const& translation) {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-
         odometry.ResetTranslation(translation);
         /* We need to update our cached pose immediately to prevent race conditions */
         cachedState.Pose = odometry.GetEstimatedPosition();
@@ -287,8 +268,6 @@ public:
      * \param rotation Rotation to make the current rotation
      */
     void ResetRotation(frc::Rotation3d const& rotation) {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-
         odometry.ResetRotation(rotation);
         /* We need to update our cached pose immediately to prevent race conditions */
         cachedState.Pose = odometry.GetEstimatedPosition();
@@ -309,10 +288,7 @@ public:
      * \param fieldDirection Heading indicating which direction is forward from
      *                       the requests#ForwardPerspectiveValue#BlueAlliance perspective
      */
-    void SetOperatorPerspectiveForward(frc::Rotation3d fieldDirection) {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-        operatorForwardDirection = fieldDirection;
-    }
+    void SetOperatorPerspectiveForward(frc::Rotation3d fieldDirection) { operatorForwardDirection = fieldDirection; }
 
     /**
      * \brief Returns the requests#ForwardPerspectiveValue#BlueAlliance perpective
@@ -325,10 +301,7 @@ public:
      * \returns Heading indicating which direction is forward from
      *          the requests#ForwardPerspectiveValue#BlueAlliance perspective
      */
-    frc::Rotation3d GetOperatorForwardDirection() const {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-        return operatorForwardDirection;
-    }
+    frc::Rotation3d GetOperatorForwardDirection() const { return operatorForwardDirection; }
 
     /**
      * \brief Adds a vision measurement to the Kalman Filter. This will correct the
@@ -353,10 +326,7 @@ public:
      *                        This means that you should use utils#GetCurrentTime
      *                        as your time source in this case.
      */
-    void AddVisionMeasurement(frc::Pose3d visionRobotPose, units::second_t timestamp) {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-        odometry.AddVisionMeasurement(visionRobotPose, timestamp);
-    }
+    void AddVisionMeasurement(frc::Pose3d visionRobotPose, units::second_t timestamp) { odometry.AddVisionMeasurement(visionRobotPose, timestamp); }
 
     /**
      * \brief Adds a vision measurement to the Kalman Filter. This will correct the
@@ -391,7 +361,6 @@ public:
      *                                 measurement less.
      */
     void AddVisionMeasurement(frc::Pose3d visionRobotPose, units::second_t timestamp, std::array<double, 4> const& visionMeasurementStdDevs) {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
         odometry.AddVisionMeasurement(visionRobotPose, timestamp, visionMeasurementStdDevs);
     }
 
@@ -406,10 +375,7 @@ public:
      *                                 vision less. This matrix is in the form [x,
      *                                 y, theta]ᵀ, with units in meters and radians.
      */
-    void SetVisionMeasurementStdDevs(std::array<double, 4> const& visionMeasurementStdDevs) {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-        odometry.SetVisionMeasurementStdDevs(visionMeasurementStdDevs);
-    }
+    void SetVisionMeasurementStdDevs(std::array<double, 4> const& visionMeasurementStdDevs) { odometry.SetVisionMeasurementStdDevs(visionMeasurementStdDevs); }
 
     /**
      * \brief Sets the pose estimator's trust in robot odometry. This might be used
@@ -419,10 +385,7 @@ public:
      *                     numbers to trust your state estimate less. This matrix is
      *                     in the form [x, y, theta]ᵀ, with units in meters and radians.
      */
-    void SetStateStdDevs(std::array<double, 4> const& stateStdDevs) {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-        odometry.SetStateStdDevs(stateStdDevs);
-    }
+    void SetStateStdDevs(std::array<double, 4> const& stateStdDevs) { odometry.SetStateStdDevs(stateStdDevs); }
 
     /**
      * \brief Return the pose at a given timestamp, if the buffer is not empty.
@@ -438,10 +401,7 @@ public:
      * \returns The pose at the given timestamp (or std::nullopt if the buffer is
      * empty).
      */
-    std::optional<frc::Pose3d> SamplePoseAt(units::second_t timestamp) const {
-        std::lock_guard<std::recursive_mutex> lock{stateLock};
-        return odometry.SampleAt(timestamp);
-    }
+    std::optional<frc::Pose3d> SamplePoseAt(units::second_t timestamp) const { return odometry.SampleAt(timestamp); }
 
     /**
      * \brief Get a reference to the module at the specified index.
