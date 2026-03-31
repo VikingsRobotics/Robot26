@@ -1,5 +1,7 @@
 #include "commands/ShooterControllerCommand.hpp"
 
+#include <frc/Timer.h>
+
 #include "shooter/ShooterRequest.hpp"
 #include "Constants.hpp"
 
@@ -11,6 +13,7 @@ ShooterControllerCommand::ShooterControllerCommand(ShooterSubsystem* const subsy
 
 void ShooterControllerCommand::Initialize() {
     m_limiter.Reset(units::dimensionless::scalar_t{0});
+    running = false;
 }
 
 void ShooterControllerCommand::Execute() {
@@ -24,14 +27,19 @@ void ShooterControllerCommand::Execute() {
         renormalized = -(control + deadband) / (1 - deadband);
     }
 
-    if (renormalized > 0.0)
+    if (renormalized > 0.0) {
+        if (!running) {
+            timestampStart = frc::Timer::GetTimestamp();
+        }
+        running = true;
         m_subsystem->SetControl(SurfaceRequest{}
                                     .WithSpeeds(renormalized * Shooter::TeleopOperator::kFlywheelMaxSpeed)
                                     .WithType(FlywheelRequestType::kClosedLoop)
-                                    .WithFeederSpeed(units::dimensionless::scalar_t{8.0})
-                                    .WithFeederTime(0.7_s));
-    else
+                                    .WithFeederSpeed(units::dimensionless::scalar_t{(frc::Timer::GetTimestamp() - timestampStart) > 0.3_s ? 8.0 : 0.0}));
+    } else {
+        running = false;
         m_subsystem->SetControl(ShooterBrake{});
+    }
 }
 
 void ShooterControllerCommand::End(bool interrupted) {

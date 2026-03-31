@@ -164,7 +164,6 @@ public:
     template <std::derived_from<ShooterRequest> Request>
         requires(!std::is_const_v<Request>)
     void SetControl(Request& request) {
-        request.startTimestamp = frc::Timer::GetTimestamp();
         SetControl([request](auto const& params, auto flywheel) mutable { return request.Apply(params, flywheel); });
     }
 
@@ -178,7 +177,6 @@ public:
     template <std::derived_from<ShooterRequest> Request>
         requires(!std::is_const_v<Request>)
     void SetControl(Request&& newRequest) {
-        newRequest.startTimestamp = frc::Timer::GetTimestamp();
         SetControl([request = std::move(newRequest)](auto const& params, auto flywheel) mutable { return request.Apply(params, flywheel); });
     }
 

@@ -47,7 +47,9 @@ public:
     using SwerveDrivetrain::SeedFieldCentric;
     using SwerveDrivetrain::SetControl;
     using SwerveDrivetrain::SetOperatorPerspectiveForward;
+#ifdef SWERVE_POSE_ESTIMATOR_CUSTOM
     using SwerveDrivetrain::SetStateStdDevs;
+#endif
     using SwerveDrivetrain::SetVisionMeasurementStdDevs;
     using SwerveDrivetrain::TareEverything;
 

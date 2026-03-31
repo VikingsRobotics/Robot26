@@ -37,7 +37,7 @@ static configs::TalonFXConfiguration GetDriveConfigurationFromConfig(const Swerv
     driveConfig.Feedback.WithFeedbackSensorSource(FeedbackSensorSourceValue::RotorSensor)
         .WithFeedbackRotorOffset(0_tr)
         .WithRotorToSensorRatio(1)
-        .WithSensorToMechanismRatio(configs.DriveMotorGearRatio)
+        .WithSensorToMechanismRatio(1)
         .WithVelocityFilterTimeConstant(0.0_s);
 
     driveConfig.OpenLoopRamps.WithDutyCycleOpenLoopRampPeriod(0_s).WithVoltageOpenLoopRampPeriod(0_s).WithTorqueOpenLoopRampPeriod(0_s);
@@ -162,7 +162,7 @@ void SwerveModule::Apply(ModuleRequest const& moduleRequest) {
             break;
 
         case ModuleDriveRequestType::Velocity:
-            driveMotor.SetControl(ctre::phoenix6::controls::VelocityVoltage{desired.speed * 1_tr / 1_m}.WithFeedForward(ff.voltage));
+            driveMotor.SetControl(ctre::phoenix6::controls::VelocityVoltage{(desired.speed * kDriveRotationsPerMeter)}.WithFeedForward(ff.voltage));
             break;
 
         default:
@@ -170,9 +170,9 @@ void SwerveModule::Apply(ModuleRequest const& moduleRequest) {
             break;
     }
 
-    cachedState = CacheState{.drive = CacheState::Drive{.position = drivePosition.GetValue() * 1_m / 1_tr,
-                                                        .velocity = driveVelocity.GetValue() * 1_m / 1_tr,
-                                                        .acceleration = driveAcceleration.GetValue() * 1_m / 1_tr,
+    cachedState = CacheState{.drive = CacheState::Drive{.position = drivePosition.GetValue() / kDriveRotationsPerMeter,
+                                                        .velocity = driveVelocity.GetValue() / kDriveRotationsPerMeter,
+                                                        .acceleration = driveAcceleration.GetValue() / kDriveRotationsPerMeter,
                                                         .voltage = driveMotorOutputVoltage.GetValue(),
                                                         .current = driveMotorOutputCurrent.GetValue()},
                              .azimuth = CacheState::Azimuth{.position = units::turn_t{steerAbsoluteEncoder.GetPosition()},
@@ -185,7 +185,7 @@ frc::SwerveModulePosition SwerveModule::GetPosition(bool refresh) {
     if (refresh) {
         drivePosition.Refresh(false);
     }
-    return frc::SwerveModulePosition{drivePosition.GetValue() * (1_m / 1_tr),
+    return frc::SwerveModulePosition{drivePosition.GetValue() / kDriveRotationsPerMeter,
                                      frc::Rotation2d{units::turn_t{steerAbsoluteEncoder.GetPosition()} + chassisAngularOffset}};
 }
 

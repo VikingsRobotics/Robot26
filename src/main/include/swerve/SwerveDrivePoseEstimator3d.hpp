@@ -2,11 +2,17 @@
 #define SWERVE_POSE_ESTIMATOR_H
 #pragma once
 
-#include <frc/interpolation/TimeInterpolatableBuffer.h>
-#include <map>
-
 #include "swerve/SwerveDriveOdometry3d.hpp"
 
+#if 1
+#include <frc/estimator/SwerveDrivePoseEstimator3d.h>
+
+using SwerveDrivePoseEstimator3d = frc::SwerveDrivePoseEstimator3d<4>;
+
+#else
+#define SWERVE_POSE_ESTIMATOR_CUSTOM
+#include <frc/interpolation/TimeInterpolatableBuffer.h>
+#include <map>
 
 /**
  * \brief This class wraps Swerve Drive Odometry to fuse latency-compensated
@@ -262,5 +268,7 @@ private:
 
     frc::Pose3d m_poseEstimate;
 };
+
+#endif
 
 #endif

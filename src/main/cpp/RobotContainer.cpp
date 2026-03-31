@@ -22,26 +22,25 @@ RobotContainer::RobotContainer() : joystick{Swerve::TeleopOperator::kDriverContr
     shooterSubsystem.SetDefaultCommand(ShooterControllerCommand{&shooterSubsystem, controller});
 
     ConfigureBindings();
-    frc::DataLogManager::Stop();
 }
 
 void RobotContainer::ConfigureBindings() {
     autoChooser = pathplanner::AutoBuilder::buildAutoChooser();
-    // frc::SmartDashboard::PutData(&swerveSubsystem);
-    // frc::SmartDashboard::PutData(&shooterSubsystem);
+    frc::SmartDashboard::PutData(&swerveSubsystem);
+    frc::SmartDashboard::PutData(&shooterSubsystem);
 
-    // frc::SmartDashboard::PutData(&autoChooser);
+    frc::SmartDashboard::PutData(&autoChooser);
 
-    // frc::SmartDashboard::PutData(&axisSwerve);
-    // frc::SmartDashboard::PutData(&polarSwerve);
-    // frc::SmartDashboard::PutData(&lookSwerve);
+    frc::SmartDashboard::PutData(&axisSwerve);
+    frc::SmartDashboard::PutData(&polarSwerve);
+    frc::SmartDashboard::PutData(&lookSwerve);
 
-    // frc::SmartDashboard::PutData(&importantCommand);
+    frc::SmartDashboard::PutData(&importantCommand);
 
     swerveSubsystem.AddFunctionCallbackOnTelemerty(
         [this](SwerveDrivetrain::SwerveDriveState const& state) { shooterSubsystem.UpdateShooterPosition(state.Pose); });
 }
 
 frc2::Command* RobotContainer::GetAutonomousCommand() {
-    return autoChooser.GetSelected();
+    return nullptr;  // autoChooser.GetSelected();
 }

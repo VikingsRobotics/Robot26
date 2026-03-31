@@ -377,6 +377,7 @@ public:
      */
     void SetVisionMeasurementStdDevs(std::array<double, 4> const& visionMeasurementStdDevs) { odometry.SetVisionMeasurementStdDevs(visionMeasurementStdDevs); }
 
+#ifdef SWERVE_POSE_ESTIMATOR_CUSTOM
     /**
      * \brief Sets the pose estimator's trust in robot odometry. This might be used
      * to change trust in odometry after an impact with the wall or traversing a bump.
@@ -386,6 +387,7 @@ public:
      *                     in the form [x, y, theta]ᵀ, with units in meters and radians.
      */
     void SetStateStdDevs(std::array<double, 4> const& stateStdDevs) { odometry.SetStateStdDevs(stateStdDevs); }
+#endif
 
     /**
      * \brief Return the pose at a given timestamp, if the buffer is not empty.

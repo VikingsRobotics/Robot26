@@ -1,4 +1,7 @@
 #include "swerve/SwerveDrivePoseEstimator3d.hpp"
+
+#ifdef SWERVE_POSE_ESTIMATOR_CUSTOM
+
 #include "wpimath/MathShared.h"
 
 #include <frc/Timer.h>
@@ -210,3 +213,5 @@ void SwerveDrivePoseEstimator3d::UpdateVisionMatrices() {
     m_visionK(4, 4) = angle_gain;
     m_visionK(5, 5) = angle_gain;
 }
+
+#endif

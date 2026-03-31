@@ -213,7 +213,7 @@ private:
     rev::spark::SparkMax steerMotor;
 
     rev::spark::SparkAbsoluteEncoder steerAbsoluteEncoder;
-    rev::spark::SparkClosedLoopController& steerLoopController;
+    rev::spark::SparkClosedLoopController steerLoopController;
 
     units::turn_t chassisAngularOffset;
     frc::Translation2d moduleOffset;
@@ -263,7 +263,7 @@ private:
 
 public:
     /**
-     * \brief Construct a SwerveModuleImpl with the specified constants.
+     * \brief Construct a SwerveModule with the specified constants.
      *
      * \param constants Constants used to construct the module
      * \param canbus    The CAN bus this module is on
