@@ -75,6 +75,11 @@ void SwerveDrivetrain::Periodic() {
     static int32_t failedDaqs = 0;
     static int32_t successfulDaqs = 0;
 
+    const units::second_t now = frc::Timer::GetTimestamp();
+    const units::second_t dt = now - lastTimestamp;
+    lastTimestamp = now;
+    units::second_t averageLoopTime = loopFilter.Calculate(dt);
+
     if (!ctre::phoenix6::BaseStatusSignal::WaitForAll(0_s, allSignals).IsOK()) {
         failedDaqs++;
         return;
@@ -84,11 +89,6 @@ void SwerveDrivetrain::Periodic() {
         return;
     }
     successfulDaqs++;
-
-    const units::second_t now = frc::Timer::GetTimestamp();
-    const units::second_t dt = now - lastTimestamp;
-    lastTimestamp = now;
-    units::second_t averageLoopTime = loopFilter.Calculate(dt);
 
     frc::Quaternion currentOrientation{pigeonW.GetValue()(), pigeonX.GetValue()(), pigeonY.GetValue()(), pigeonZ.GetValue()()};
 

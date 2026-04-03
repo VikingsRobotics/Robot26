@@ -39,8 +39,6 @@ namespace DeviceIdentifier {
 constexpr ctre::phoenix6::CANBus kCANBus{""};
 // REV: PDH
 constexpr int kPDHId = 1;
-// REV: PCM
-constexpr int kPCMId = 2;
 // CTRE: CANBus Pigeon2 ID
 constexpr int kGyroId = 3;
 // CTRE: Falcon 500 Front Left Motor ID
@@ -142,13 +140,10 @@ constexpr SwerveModuleConstants kFrontLeft =
                                                                     .iMaxAccum = 0.0,
                                                                     .minOut = -1.0,
                                                                     .maxOut = 1.0,
-                                                                    .posWrapEnabled = true,
-                                                                    .posMinInput = 0.0,
-                                                                    .posMaxInput = 1.0,
                                                                     .sensor = rev::spark::FeedbackSensor::kAbsoluteEncoder,
-                                                                    .cruiseVelocity = Mechanism::kMaxRotation(),
-                                                                    .maxAcceleration = 3_tr_per_s_sq(),
-                                                                    .allowedError = 0.5,
+                                                                    .cruiseVelocity = Mechanism::kMaxRotation.convert<units::radians_per_second>()(),
+                                                                    .maxAcceleration = 3.0_rad_per_s(),
+                                                                    .allowedError = 0.0,
                                                                     .kS = 0.0,
                                                                     .kV = 0.0,
                                                                     .kA = 0.0})
@@ -196,13 +191,13 @@ constexpr units::hertz_t kAngleLimiter = 1 / 1_s;
 // Slew rate limiter for translation magitude
 constexpr units::hertz_t kMagLimiter = 1 / 1_s;
 // Slew rate limiter for translation direction
-constexpr units::hertz_t kDirLimiter = 1 / 1_s;
+constexpr units::unit_t<units::compound_unit<units::radians, units::inverse<units::second>>> kDirLimiter = 1_rad / 1_s;
 
 
 // Minimum percent of joystick distance before robot response (move)
 constexpr double kDriveDeadband = 0.15;
 // Minimum percent of joystick twist distance before robot response (angle)
-constexpr double kDriveAngleDeadband = 0.15;
+constexpr double kDriveAngleDeadband = 0.3;
 // Maximum speed that the robot will move
 constexpr units::meters_per_second_t kDriveMoveSpeedMax = 3.0_mps;
 // Maximum accel that the robot will move
@@ -237,16 +232,19 @@ constexpr units::radians_per_second_squared_t kMaxAngularAcceleration = 3.9_tr_p
 
 namespace Shooter {
 
+constexpr frc::Translation3d kBlueShootLocation{182.1_in, 158.85_in, 72_in};
+constexpr frc::Translation3d kRedShootLocation{469.1_in, 158.85_in, 72_in};
+
 constexpr ShooterFlywheelConstants kFlywheel =
     ShooterFlywheelConstants{}
         .WithMotorId(DeviceIdentifier::kFlywheelId)
-        .WithLocation(frc::Transform3d{frc::Translation3d{}, frc::Rotation3d{}})
+        .WithLocation(frc::Transform3d{frc::Translation3d{1_in, 9_in, 12_in}, frc::Rotation3d{0_deg, 0_deg, 0_deg}})
         .WithMotorInverted(false)
         .WithMotorGearRatio(units::dimensionless::scalar_t{1.0 / 1.0})
         .WithWheelRadius(2_in)
         .WithWheelMass(0.6_lb)
         .WithSlipCurrent(120_A)
-        .WithMotorGains(ShooterFlywheelConstants::Slot0ConfigsRev{.kP = 1.0,
+        .WithMotorGains(ShooterFlywheelConstants::Slot0ConfigsRev{.kP = 0.1,
                                                                   .kI = 0.0,
                                                                   .kD = 0.0,
                                                                   .dFilter = 0.0,
@@ -256,18 +254,18 @@ constexpr ShooterFlywheelConstants kFlywheel =
                                                                   .maxOut = 1.0,
                                                                   .posWrapEnabled = false,
                                                                   .posMinInput = 0.0,
-                                                                  .posMaxInput = 0.0,
+                                                                  .posMaxInput = 1.0,
                                                                   .sensor = rev::spark::FeedbackSensor::kPrimaryEncoder,
                                                                   .cruiseVelocity = 3_tps(),
                                                                   .maxAcceleration = 3_tr_per_s_sq(),
-                                                                  .allowedError = 0.25,
-                                                                  .kS = 0.0,
-                                                                  .kV = 0.0,
+                                                                  .allowedError = 0.0,
+                                                                  .kS = 0.1,
+                                                                  .kV = 1.0 / 565.0,
                                                                   .kA = 0.0})
         .WithSpeedAt12Volts(6704_rpm)
         .WithFeederId(DeviceIdentifier::kFeederId)
-        .WithFeederInverted(false)
-        .WithFeederGains(ShooterFlywheelConstants::Slot0ConfigsRev{.kP = 1.0,
+        .WithFeederInverted(true)
+        .WithFeederGains(ShooterFlywheelConstants::Slot0ConfigsRev{.kP = 0.01,
                                                                    .kI = 0.0,
                                                                    .kD = 0.0,
                                                                    .dFilter = 0.0,
@@ -277,13 +275,13 @@ constexpr ShooterFlywheelConstants kFlywheel =
                                                                    .maxOut = 1.0,
                                                                    .posWrapEnabled = false,
                                                                    .posMinInput = 0.0,
-                                                                   .posMaxInput = 0.0,
+                                                                   .posMaxInput = 1.0,
                                                                    .sensor = rev::spark::FeedbackSensor::kPrimaryEncoder,
-                                                                   .cruiseVelocity = 15,
-                                                                   .maxAcceleration = 15,
-                                                                   .allowedError = 0.1,
-                                                                   .kS = 0.0,
-                                                                   .kV = 0.0,
+                                                                   .cruiseVelocity = 500,
+                                                                   .maxAcceleration = 500,
+                                                                   .allowedError = 0.2,
+                                                                   .kS = 0.13,
+                                                                   .kV = 0.35,
                                                                    .kA = 0.0});
 
 namespace TeleopOperator {
@@ -296,9 +294,31 @@ constexpr units::hertz_t kFlywheelLimiter = 1 / 1_s;
 // Minimum percent of joystick distance before flywheel response
 constexpr double kFlywheelDeadband = 0.1;
 // Maximum speed that the flywheel will move (under teleop)
-constexpr units::meters_per_second_t kFlywheelMaxSpeed = 3.0_mps;
+constexpr units::meters_per_second_t kFlywheelMaxSpeed = 35.0_mps;
+// Time allowed to spin up the flywheel
+constexpr units::second_t kTimeout = 0.5_s;
+// Speed the feeder will go after timeout
+constexpr units::dimensionless::scalar_t kFeederSpeed{};
 }  // namespace TeleopOperator
 
 }  // namespace Shooter
+
+namespace Elevator {
+
+namespace SolenoidId {
+constexpr int kForwardChannelId = 1;
+constexpr int kReverseChannelId = 0;
+}  // namespace SolenoidId
+
+}  // namespace Elevator
+
+namespace Cage {
+
+namespace SolenoidId {
+constexpr int kForwardChannelId = 15;
+constexpr int kReverseChannelId = 14;
+}  // namespace SolenoidId
+
+}  // namespace Cage
 
 #endif

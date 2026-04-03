@@ -4,6 +4,7 @@
 #include "Constants.hpp"
 
 #include <frc/smartdashboard/SmartDashboard.h>
+#include <frc/MathUtil.h>
 #include <ctre/phoenix6/StatusSignal.hpp>
 
 
@@ -18,7 +19,7 @@ static configs::TalonFXConfiguration GetDriveConfigurationFromConfig(const Swerv
         .WithNeutralMode(NeutralModeValue::Brake)
         .WithPeakForwardDutyCycle(1.0)
         .WithPeakReverseDutyCycle(-1.0)
-        .WithDutyCycleNeutralDeadband(0.0)
+        .WithDutyCycleNeutralDeadband(0.01)
         .WithControlTimesyncFreqHz(0_Hz);
 
     driveConfig.CurrentLimits.WithStatorCurrentLimit(configs.SlipCurrent)
@@ -68,15 +69,15 @@ static void ConfigureAzimuthFromConstants(rev::spark::SparkMax& motor, const Swe
     AbsoluteEncoderConfig azimuthAbsEncoderConfig;
 
     azimuthAbsEncoderConfig.Apply(AbsoluteEncoderConfig::Presets::REV_ThroughBoreEncoder());
-    azimuthAbsEncoderConfig.PositionConversionFactor(1);
-    azimuthAbsEncoderConfig.VelocityConversionFactor(1.0 / 60.0);
+    azimuthAbsEncoderConfig.PositionConversionFactor(2.0 * std::numbers::pi);
+    azimuthAbsEncoderConfig.VelocityConversionFactor((2.0 * std::numbers::pi) / 60.0);
     azimuthAbsEncoderConfig.ZeroCentered(false);
     azimuthAbsEncoderConfig.Inverted(configs.EncoderInverted);
 
     ClosedLoopConfig azimuthClosedLoopConfig;
     azimuthClosedLoopConfig.SetFeedbackSensor(FeedbackSensor::kAbsoluteEncoder)
-        .PositionWrappingEnabled(configs.SteerMotorGains.posWrapEnabled)
-        .PositionWrappingInputRange(configs.SteerMotorGains.posMinInput, configs.SteerMotorGains.posMaxInput)
+        .PositionWrappingEnabled(true)
+        .PositionWrappingInputRange(-std::numbers::pi, std::numbers::pi)
         .MinOutput(configs.SteerMotorGains.minOut)
         .MaxOutput(configs.SteerMotorGains.maxOut);
     azimuthClosedLoopConfig.maxMotion.CruiseVelocity(configs.SteerMotorGains.cruiseVelocity, kSlot0)
@@ -129,11 +130,12 @@ SwerveModule::SwerveModule(const SwerveModuleConstants& constants, ctre::phoenix
 
 void SwerveModule::Apply(ModuleRequest const& moduleRequest) {
     frc::SwerveModuleState desired = moduleRequest.State;
-    frc::Rotation2d currentRotation{units::turn_t{steerAbsoluteEncoder.GetPosition()} + chassisAngularOffset};
+    desired.angle = frc::Rotation2d{frc::AngleModulus(desired.angle.Radians() + chassisAngularOffset)};
+    frc::Rotation2d currentRotation{frc::AngleModulus(units::radian_t{steerAbsoluteEncoder.GetPosition()})};
     desired.Optimize(currentRotation);
     targetState = desired;
 
-    units::turn_t targetRotations = targetState.angle.Radians();
+    units::radian_t targetRotations = frc::AngleModulus(targetState.angle.Radians());
 
     /**
      * Wait for the day that REV supports putting rotation speed in PID command
@@ -170,15 +172,16 @@ void SwerveModule::Apply(ModuleRequest const& moduleRequest) {
             break;
     }
 
-    cachedState = CacheState{.drive = CacheState::Drive{.position = drivePosition.GetValue() / kDriveRotationsPerMeter,
-                                                        .velocity = driveVelocity.GetValue() / kDriveRotationsPerMeter,
-                                                        .acceleration = driveAcceleration.GetValue() / kDriveRotationsPerMeter,
-                                                        .voltage = driveMotorOutputVoltage.GetValue(),
-                                                        .current = driveMotorOutputCurrent.GetValue()},
-                             .azimuth = CacheState::Azimuth{.position = units::turn_t{steerAbsoluteEncoder.GetPosition()},
-                                                            .velocity = units::turns_per_second_t{steerAbsoluteEncoder.GetVelocity()},
-                                                            .voltage = units::volt_t{steerMotor.GetBusVoltage() * steerMotor.GetAppliedOutput()},
-                                                            .current = units::ampere_t{steerMotor.GetOutputCurrent()}}};
+    cachedState =
+        CacheState{.drive = CacheState::Drive{.position = drivePosition.GetValue() / kDriveRotationsPerMeter,
+                                              .velocity = driveVelocity.GetValue() / kDriveRotationsPerMeter,
+                                              .acceleration = driveAcceleration.GetValue() / kDriveRotationsPerMeter,
+                                              .voltage = driveMotorOutputVoltage.GetValue(),
+                                              .current = driveMotorOutputCurrent.GetValue()},
+                   .azimuth = CacheState::Azimuth{.position = frc::AngleModulus(units::radian_t{steerAbsoluteEncoder.GetPosition()} - chassisAngularOffset),
+                                                  .velocity = units::radians_per_second_t{steerAbsoluteEncoder.GetVelocity()},
+                                                  .voltage = units::volt_t{steerMotor.GetBusVoltage() * steerMotor.GetAppliedOutput()},
+                                                  .current = units::ampere_t{steerMotor.GetOutputCurrent()}}};
 }
 
 frc::SwerveModulePosition SwerveModule::GetPosition(bool refresh) {
@@ -186,7 +189,7 @@ frc::SwerveModulePosition SwerveModule::GetPosition(bool refresh) {
         drivePosition.Refresh(false);
     }
     return frc::SwerveModulePosition{drivePosition.GetValue() / kDriveRotationsPerMeter,
-                                     frc::Rotation2d{units::turn_t{steerAbsoluteEncoder.GetPosition()} + chassisAngularOffset}};
+                                     frc::Rotation2d{frc::AngleModulus(units::radian_t{steerAbsoluteEncoder.GetPosition()} - chassisAngularOffset)}};
 }
 
 SwerveModule::MotorTorqueFeedforwards SwerveModule::CalculateMotorTorqueFeedforwards(units::newton_t feedforwardX, units::newton_t feedforwardY) const {
@@ -196,7 +199,7 @@ SwerveModule::MotorTorqueFeedforwards SwerveModule::CalculateMotorTorqueFeedforw
 
         frc::Rotation2d feedforwardRotation{feedforwardX.value(), feedforwardY.value()};
         frc::Rotation2d moduleFeedforwardRotation =
-            feedforwardRotation.RotateBy(frc::Rotation2d{units::turn_t{steerAbsoluteEncoder.GetPosition()} + chassisAngularOffset});
+            feedforwardRotation.RotateBy(frc::Rotation2d{frc::AngleModulus(units::radian_t{steerAbsoluteEncoder.GetPosition()} - chassisAngularOffset)});
 
         calculated.torque = distance * moduleFeedforwardRotation.Cos() * kDriveNmPerWheelN;
         ctre::unit::newton_meters_per_ampere_t motorKT = driveMotorKT.GetValue();
@@ -217,6 +220,6 @@ units::turns_per_second_t SwerveModule::ApplyVelocityCorrections(units::turns_pe
 }
 
 void SwerveModule::UpdateModuleSupplem() {
-    units::turns_per_second_t steerSpeed{steerAbsoluteEncoder.GetVelocity()};
+    units::radians_per_second_t steerSpeed{steerAbsoluteEncoder.GetVelocity()};
     moduleSupplemSpeed = moduleSupplem.Calculate(steerSpeed);
 }

@@ -168,11 +168,11 @@ public:
     /**
      * \brief The allowable deadband of the request.
      */
-    units::meters_per_second_t Deadband = 0_mps;
+    units::meters_per_second_t Deadband = 0.05_mps;
     /**
      * \brief The rotational deadband of the request.
      */
-    units::radians_per_second_t RotationalDeadband = 0_rad_per_s;
+    units::radians_per_second_t RotationalDeadband = 0.05_rad_per_s;
     /**
      * \brief The center of rotation the robot should rotate around. This is
      * (0,0) by default, which will rotate around the center of the robot.
@@ -182,7 +182,7 @@ public:
     /**
      * \brief The type of control request to use for the drive motor.
      */
-    ModuleDriveRequestType DriveRequestType = ModuleDriveRequestType::OpenLoopVoltage;
+    ModuleDriveRequestType DriveRequestType = ModuleDriveRequestType::Velocity;
     /**
      * \brief The type of control request to use for the steer motor.
      */
@@ -534,11 +534,11 @@ public:
     /**
      * \brief The allowable deadband of the request.
      */
-    units::meters_per_second_t Deadband = 0_mps;
+    units::meters_per_second_t Deadband = 0.05_mps;
     /**
      * \brief The rotational deadband of the request.
      */
-    units::radians_per_second_t RotationalDeadband = 0_rad_per_s;
+    units::radians_per_second_t RotationalDeadband = 0.05_rad_per_s;
     /**
      * \brief The center of rotation the robot should rotate around. This is
      * (0,0) by default, which will rotate around the center of the robot.
@@ -1586,11 +1586,11 @@ public:
     /**
      * \brief The allowable deadband of the request.
      */
-    units::meters_per_second_t Deadband = 0_mps;
+    units::meters_per_second_t Deadband = 0.05_mps;
     /**
      * \brief The rotational deadband of the request.
      */
-    units::radians_per_second_t RotationalDeadband = 0_rad_per_s;
+    units::radians_per_second_t RotationalDeadband = 0.05_rad_per_s;
     /**
      * \brief The maximum absolute rotational rate to allow.
      * Setting this to 0 results in no cap to rotational rate.
@@ -1901,11 +1901,11 @@ public:
     /**
      * \brief The allowable deadband of the request.
      */
-    units::meters_per_second_t Deadband = 0_mps;
+    units::meters_per_second_t Deadband = 0.05_mps;
     /**
      * \brief The rotational deadband of the request.
      */
-    units::radians_per_second_t RotationalDeadband = 0_rad_per_s;
+    units::radians_per_second_t RotationalDeadband = 0.05_rad_per_s;
     /**
      * \brief The maximum absolute rotational rate to allow.
      * Setting this to 0 results in no cap to rotational rate.

@@ -14,12 +14,13 @@
 #include <frc2/command/button/CommandJoystick.h>
 #include <frc2/command/button/CommandXboxController.h>
 
+#include "subsystems/CageSubsystem.hpp"
+#include "subsystems/ElevatorSubsystem.hpp"
 #include "subsystems/SwerveSubsystem.hpp"
 #include "subsystems/ShooterSubsystem.hpp"
 
-#include "commands/SwerveJoystickAxisLimitedCommand.hpp"
-#include "commands/SwerveJoystickPolarLimitedCommand.hpp"
-#include "commands/SwerveJoystickLookTowardsCommand.hpp"
+#include "commands/SwerveJoystickMoveCommand.hpp"
+#include "commands/SwerveJoystickLookCommand.hpp"
 #include "commands/ShooterControllerCommand.hpp"
 
 #include "commands/SwerveImportantCommand.hpp"
@@ -32,6 +33,8 @@ public:
 
 public:
     void ConfigureBindings();
+    CageSubsystem cageSubsystem{};
+    ElevatorSubsystem elevatorSubsystem{};
     SwerveSubsystem swerveSubsystem{};
     ShooterSubsystem shooterSubsystem{};
 
@@ -40,9 +43,8 @@ public:
     frc2::CommandJoystick joystick;
     frc2::CommandXboxController controller;
 
-    SwerveJoystickAxisLimitedCommand axisSwerve{&swerveSubsystem, joystick};
-    SwerveJoystickPolarLimitedCommand polarSwerve{&swerveSubsystem, joystick};
-    SwerveJoystickLookTowardsCommand lookSwerve{&swerveSubsystem, joystick};
+    SwerveJoystickMoveCommand moveSwerve{&swerveSubsystem, joystick};
+    SwerveJoystickLookCommand lookSwerve{&swerveSubsystem, joystick};
 
     ShooterControllerCommand controllerShooter{&shooterSubsystem, controller};
 

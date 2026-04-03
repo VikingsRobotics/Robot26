@@ -25,7 +25,7 @@ public:
 
 private:
     ShooterSubsystem* const m_subsystem;
-    frc2::CommandXboxController& m_controller;
+    frc::XboxController& m_controller;
     frc::SlewRateLimiter<units::scalar> m_limiter;
     bool running = false;
     units::second_t timestampStart = 0_s;

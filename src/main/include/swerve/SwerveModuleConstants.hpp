@@ -116,15 +116,6 @@ struct SwerveModuleConstants {
          */
         double minOut, maxOut;
         /**
-         * posWrapEnabled: Enables the controller to assume that posMinInput and posMaxInput are the same point
-         */
-        bool posWrapEnabled;
-        /**
-         * posMinInput: Min value that the controller can output during position wrapped input
-         * posMinInput: Max value that the controller can output during position wrapped input
-         */
-        double posMinInput, posMaxInput;
-        /**
          * Sensor from where the input is provided
          */
         rev::spark::FeedbackSensor sensor;

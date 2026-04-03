@@ -44,34 +44,39 @@ static void ConfigureFlywheelFromConstants(rev::spark::SparkFlex& motor, const S
 }
 
 static void ConfigureFeederFromConstants(rev::spark::SparkMax& feeder, const ShooterFlywheelConstants& configs) {
-    SparkMaxConfig flywheelConfig{};
+    SparkMaxConfig feederConfig{};
 
-    flywheelConfig.Apply(SparkBaseConfig::Presets::REV_NEO());
-    flywheelConfig.Inverted(configs.MotorInverted);
-    flywheelConfig.SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
+    feederConfig.Apply(SparkBaseConfig::Presets::REV_NEO());
+    feederConfig.Inverted(configs.FeederInverted);
+    feederConfig.SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
 
-    ClosedLoopConfig flywheelClosedLoopConfig;
-    flywheelClosedLoopConfig.SetFeedbackSensor(FeedbackSensor::kPrimaryEncoder)
-        .PositionWrappingEnabled(configs.MotorGains.posWrapEnabled)
-        .PositionWrappingInputRange(configs.MotorGains.posMinInput, configs.MotorGains.posMaxInput)
-        .MinOutput(configs.MotorGains.minOut)
-        .MaxOutput(configs.MotorGains.maxOut);
-    flywheelClosedLoopConfig.maxMotion.CruiseVelocity(configs.MotorGains.cruiseVelocity, kSlot0)
-        .MaxAcceleration(configs.MotorGains.maxAcceleration, kSlot0)
+    EncoderConfig feederEncoderConfig;
+
+    feederEncoderConfig.PositionConversionFactor(1.0);
+    feederEncoderConfig.VelocityConversionFactor(1.0 / 60.0);
+
+    ClosedLoopConfig feederClosedLoopConfig;
+    feederClosedLoopConfig.SetFeedbackSensor(FeedbackSensor::kPrimaryEncoder)
+        .PositionWrappingEnabled(configs.FeederGains.posWrapEnabled)
+        .PositionWrappingInputRange(configs.FeederGains.posMinInput, configs.FeederGains.posMaxInput)
+        .MinOutput(configs.FeederGains.minOut)
+        .MaxOutput(configs.FeederGains.maxOut);
+    feederClosedLoopConfig.maxMotion.CruiseVelocity(configs.FeederGains.cruiseVelocity, kSlot0)
+        .MaxAcceleration(configs.FeederGains.maxAcceleration, kSlot0)
         .PositionMode(MAXMotionConfig::MAXMotionPositionMode::kMAXMotionTrapezoidal)
-        .AllowedProfileError(configs.MotorGains.allowedError, kSlot0);
-    flywheelClosedLoopConfig.Pid(configs.MotorGains.kP, configs.MotorGains.kI, configs.MotorGains.kD, kSlot0)
-        .DFilter(configs.MotorGains.dFilter)
-        .IZone(configs.MotorGains.iZone)
-        .IMaxAccum(configs.MotorGains.iMaxAccum);
-    flywheelClosedLoopConfig.feedForward.sva(configs.MotorGains.kS, configs.MotorGains.kV, configs.MotorGains.kA, kSlot0);
+        .AllowedProfileError(configs.FeederGains.allowedError, kSlot0);
+    feederClosedLoopConfig.Pid(configs.FeederGains.kP, configs.FeederGains.kI, configs.FeederGains.kD, kSlot0)
+        .DFilter(configs.FeederGains.dFilter)
+        .IZone(configs.FeederGains.iZone)
+        .IMaxAccum(configs.FeederGains.iMaxAccum);
+    feederClosedLoopConfig.feedForward.sva(configs.FeederGains.kS, configs.FeederGains.kV, configs.FeederGains.kA, kSlot0);
 
-    SignalsConfig flywheelSignalConfig;
+    SignalsConfig feederSignalConfig;
 
-    flywheelSignalConfig.SetpointAlwaysOn(true).SetpointPeriodMs(20_ms());
-    flywheelSignalConfig.PrimaryEncoderVelocityAlwaysOn(true).PrimaryEncoderVelocityPeriodMs(20_ms());
+    feederSignalConfig.SetpointAlwaysOn(true).SetpointPeriodMs(20_ms());
+    feederSignalConfig.PrimaryEncoderVelocityAlwaysOn(true).PrimaryEncoderVelocityPeriodMs(20_ms());
 
-    feeder.Configure(flywheelConfig.Apply(flywheelClosedLoopConfig).Apply(flywheelSignalConfig), rev::ResetMode::kNoResetSafeParameters,
+    feeder.Configure(feederConfig.Apply(feederEncoderConfig).Apply(feederClosedLoopConfig).Apply(feederSignalConfig), rev::ResetMode::kNoResetSafeParameters,
                      rev::PersistMode::kPersistParameters);
 }
 
@@ -108,10 +113,11 @@ void ShooterFlywheel::Periodic() {
     requestParameters.kWheelMass = kWheelMass;
     requestParameters.shooterPose = cachedRobotPose.TransformBy(kShooterLocation);
     requestParameters.surfaceVelocity = units::meters_per_second_t{flywheelEncoder.GetVelocity()};
-    if (flywheelMotor.GetLastError() != rev::REVLibError::kOk) {
+    if (flywheelMotor.GetLastError() != rev::REVLibError::kOk || feederMotor.GetLastError() != rev::REVLibError::kOk) {
         failedDaqs++;
         return;
     }
+    successfulDaqs++;
     requestParameters.timestamp = now;
     requestParameters.updatePeriod = averageLoopTime;
 
@@ -126,27 +132,10 @@ void ShooterFlywheel::Periodic() {
     }
 
     cachedState.Velocity = units::meters_per_second_t{flywheelEncoder.GetVelocity()};
-    if (flywheelMotor.GetLastError() != rev::REVLibError::kOk) {
-        failedDaqs++;
-        return;
-    }
     cachedState.TargetVelocity = desired;
     cachedState.AppliedOutput = units::dimensionless::scalar_t{flywheelMotor.GetAppliedOutput()};
-    if (flywheelMotor.GetLastError() != rev::REVLibError::kOk) {
-        failedDaqs++;
-        return;
-    }
     cachedState.Voltage = units::volt_t{flywheelMotor.GetBusVoltage() * cachedState.AppliedOutput()};
-    if (flywheelMotor.GetLastError() != rev::REVLibError::kOk) {
-        failedDaqs++;
-        return;
-    }
     cachedState.Current = units::ampere_t{flywheelMotor.GetOutputCurrent()};
-    if (flywheelMotor.GetLastError() != rev::REVLibError::kOk) {
-        failedDaqs++;
-        return;
-    }
-    successfulDaqs++;
     cachedState.Timestamp = now;
     cachedState.OdometryPeriod = averageLoopTime;
     cachedState.SuccessfulDaqs = successfulDaqs;

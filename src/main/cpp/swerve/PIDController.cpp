@@ -1,5 +1,7 @@
 #include "swerve/PIDController.hpp"
 
+#include <frc/MathUtil.h>
+
 #include <algorithm>
 #include <cmath>
 
@@ -121,14 +123,8 @@ double PIDController::Calculate(double measurement, double setpoint, units::seco
     double error = m_setpoint - m_measurement;
 
     if (m_continuous) {
-        double errorBound = m_maximumInput - m_minimumInput;
-        double errorBoundHalf = errorBound / 2.0;
-
-        int numMax = (error + errorBoundHalf) / errorBound;
-        error -= numMax * errorBound;
-
-        int numMin = (error - errorBoundHalf) / errorBound;
-        error += numMin * errorBound;
+        double errorBound = (m_maximumInput - m_minimumInput) / 2.0;
+        error = frc::InputModulus(m_setpoint - m_measurement, -errorBound, errorBound);
     }
 
     m_prevError = m_positionError;

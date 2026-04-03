@@ -4,12 +4,15 @@
 
 #include "RobotContainer.hpp"
 
-#include "constants.hpp"
+#include "Constants.hpp"
 
 #include <frc/RobotState.h>
 #include <frc/smartdashboard/SmartDashboard.h>
 #include <pathplanner/lib/auto/CommandUtil.h>
 #include <pathplanner/lib/auto/NamedCommands.h>
+
+#include "commands/CageControllerCommand.hpp"
+#include "commands/ElevatorControllerCommand.hpp"
 
 #include <frc2/command/RunCommand.h>
 
@@ -18,8 +21,11 @@
 #include <frc/DataLogManager.h>
 
 RobotContainer::RobotContainer() : joystick{Swerve::TeleopOperator::kDriverControllerPort}, controller{Shooter::TeleopOperator::kShooterControllerPort} {
-    swerveSubsystem.SetDefaultCommand(SwerveJoystickAxisLimitedCommand{&swerveSubsystem, joystick});
+    swerveSubsystem.SetDefaultCommand(SwerveJoystickMoveCommand{&swerveSubsystem, joystick}.WithAxisLimited(false).WithFieldCentric(true).WithDeadband(
+        Swerve::TeleopOperator::kDriveDeadband, Swerve::TeleopOperator::kDriveDeadband, Swerve::TeleopOperator::kDriveAngleDeadband));
     shooterSubsystem.SetDefaultCommand(ShooterControllerCommand{&shooterSubsystem, controller});
+    cageSubsystem.SetDefaultCommand(CageControllerCommand{&cageSubsystem, controller});
+    elevatorSubsystem.SetDefaultCommand(ElevatorControllerCommand{&elevatorSubsystem, controller});
 
     ConfigureBindings();
 }
@@ -28,11 +34,14 @@ void RobotContainer::ConfigureBindings() {
     autoChooser = pathplanner::AutoBuilder::buildAutoChooser();
     frc::SmartDashboard::PutData(&swerveSubsystem);
     frc::SmartDashboard::PutData(&shooterSubsystem);
+    frc::SmartDashboard::PutData(&cageSubsystem);
+    frc::SmartDashboard::PutData(&elevatorSubsystem);
 
     frc::SmartDashboard::PutData(&autoChooser);
 
-    frc::SmartDashboard::PutData(&axisSwerve);
-    frc::SmartDashboard::PutData(&polarSwerve);
+    moveSwerve.WithAxisLimited(false).WithFieldCentric(true).WithDeadband(Swerve::TeleopOperator::kDriveDeadband, Swerve::TeleopOperator::kDriveDeadband,
+                                                                          Swerve::TeleopOperator::kDriveAngleDeadband);
+    frc::SmartDashboard::PutData(&moveSwerve);
     frc::SmartDashboard::PutData(&lookSwerve);
 
     frc::SmartDashboard::PutData(&importantCommand);

@@ -5,8 +5,10 @@
 #include "shooter/ShooterRequest.hpp"
 #include "Constants.hpp"
 
+#include <frc/smartdashboard/SmartDashboard.h>
+
 ShooterControllerCommand::ShooterControllerCommand(ShooterSubsystem* const subsystem, frc2::CommandXboxController& controller)
-    : m_subsystem{subsystem}, m_controller{controller}, m_limiter{Shooter::TeleopOperator::kFlywheelLimiter} {
+    : m_subsystem{subsystem}, m_controller{controller.GetHID()}, m_limiter{Shooter::TeleopOperator::kFlywheelLimiter} {
     AddRequirements(m_subsystem);
     SetName("Shooter Controller Command");
 }
@@ -32,14 +34,18 @@ void ShooterControllerCommand::Execute() {
             timestampStart = frc::Timer::GetTimestamp();
         }
         running = true;
-        m_subsystem->SetControl(SurfaceRequest{}
-                                    .WithSpeeds(renormalized * Shooter::TeleopOperator::kFlywheelMaxSpeed)
-                                    .WithType(FlywheelRequestType::kClosedLoop)
-                                    .WithFeederSpeed(units::dimensionless::scalar_t{(frc::Timer::GetTimestamp() - timestampStart) > 0.3_s ? 8.0 : 0.0}));
+        m_subsystem->SetControl(
+            SurfaceRequest{}
+                .WithSpeeds(renormalized * Shooter::TeleopOperator::kFlywheelMaxSpeed)
+                .WithType(FlywheelRequestType::kClosedLoop)
+                .WithFeederSpeed(units::dimensionless::scalar_t{
+                    (frc::Timer::GetTimestamp() - timestampStart) > Shooter::TeleopOperator::kTimeout ? Shooter::TeleopOperator::kFeederSpeed() : 0.0}));
+        frc::SmartDashboard::PutNumber("Flywheel Speed", (renormalized * Shooter::TeleopOperator::kFlywheelMaxSpeed)());
     } else {
         running = false;
         m_subsystem->SetControl(ShooterBrake{});
     }
+    frc::SmartDashboard::PutBoolean("Flywheel Running", running);
 }
 
 void ShooterControllerCommand::End(bool interrupted) {
